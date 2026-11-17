@@ -4,25 +4,42 @@ import { describe, expect, it } from "vitest";
 import { IssueFeed } from "./issue-feed";
 import { ProjectProvider } from "./project-context";
 
-const renderIssueFeed = () => render(<ProjectProvider><IssueFeed /></ProjectProvider>);
+const renderIssueFeed = () =>
+  render(
+    <ProjectProvider>
+      <IssueFeed />
+    </ProjectProvider>,
+  );
 
 describe("IssueFeed", () => {
   it("사업성 검토 게시물과 의사결정 댓글을 표시한다", () => {
     renderIssueFeed();
 
-    expect(screen.getByText("분양가·사업비 변동에 따른 수익성 민감도 검토")).toBeInTheDocument();
+    expect(
+      screen.getByText("분양가·사업비 변동에 따른 수익성 민감도 검토"),
+    ).toBeInTheDocument();
     expect(screen.queryByLabelText("첨부사진 1")).not.toBeInTheDocument();
-    expect(screen.getByText("금융비용 0.5%p 상승 시나리오를 추가한 뒤 투자심의 안건으로 상정하겠습니다.")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "금융비용 0.5%p 상승 시나리오를 추가한 뒤 투자심의 안건으로 상정하겠습니다.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("사용자가 새 댓글을 등록할 수 있다", () => {
     renderIssueFeed();
 
-    const input = screen.getByLabelText("분양가·사업비 변동에 따른 수익성 민감도 검토 댓글 입력");
-    fireEvent.change(input, { target: { value: "투자심의 자료에 반영하겠습니다." } });
+    const input = screen.getByLabelText(
+      "분양가·사업비 변동에 따른 수익성 민감도 검토 댓글 입력",
+    );
+    fireEvent.change(input, {
+      target: { value: "투자심의 자료에 반영하겠습니다." },
+    });
     fireEvent.submit(input.closest("form")!);
 
-    expect(screen.getByText("투자심의 자료에 반영하겠습니다.")).toBeInTheDocument();
+    expect(
+      screen.getByText("투자심의 자료에 반영하겠습니다."),
+    ).toBeInTheDocument();
     expect(input).toHaveValue("");
   });
 
@@ -30,13 +47,56 @@ describe("IssueFeed", () => {
     renderIssueFeed();
 
     fireEvent.click(screen.getByRole("button", { name: "+ 새 이슈 등록" }));
-    fireEvent.change(screen.getByLabelText("새 이슈 제목"), { target: { value: "신규 투자안 검토 요청" } });
-    fireEvent.change(screen.getByLabelText("새 이슈 내용"), { target: { value: "수익성 분석 후 의사결정 의견을 남겨주세요." } });
+    fireEvent.change(screen.getByLabelText("새 이슈 제목"), {
+      target: { value: "신규 투자안 검토 요청" },
+    });
+    fireEvent.change(screen.getByLabelText("새 이슈 내용"), {
+      target: { value: "수익성 분석 후 의사결정 의견을 남겨주세요." },
+    });
     fireEvent.click(screen.getByRole("button", { name: "이슈 등록" }));
     expect(screen.getByText("신규 투자안 검토 요청")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "완료" }));
     expect(screen.queryByText("신규 투자안 검토 요청")).not.toBeInTheDocument();
-    expect(screen.getByText("도시개발 인허가 선행조건 및 일정 리스크 검토")).toBeInTheDocument();
+    expect(
+      screen.getByText("도시개발 인허가 선행조건 및 일정 리스크 검토"),
+    ).toBeInTheDocument();
+  });
+
+  it("점 3개 메뉴에서 게시물 내용을 수정하고 저장한다", () => {
+    renderIssueFeed();
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "분양가·사업비 변동에 따른 수익성 민감도 검토 게시물 메뉴",
+      }),
+    );
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("menuitem", { name: /게시물 수정/ }));
+
+    fireEvent.change(screen.getByLabelText("BV-124 게시물 제목 수정"), {
+      target: { value: "분양가 조정안 투자심의 최종 검토" },
+    });
+    fireEvent.change(screen.getByLabelText("BV-124 게시물 내용 수정"), {
+      target: { value: "금융비용 상승 시나리오를 반영한 최종 검토안입니다." },
+    });
+    fireEvent.change(screen.getByLabelText("BV-124 게시물 분류 수정"), {
+      target: { value: "금융" },
+    });
+    fireEvent.change(screen.getByLabelText("BV-124 게시물 상태 수정"), {
+      target: { value: "검토 완료" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "수정 저장" }));
+
+    expect(
+      screen.getByText("분양가 조정안 투자심의 최종 검토"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("금융비용 상승 시나리오를 반영한 최종 검토안입니다."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "게시물을 수정했습니다.",
+    );
+    expect(screen.getByText("방금 전 · 수정됨")).toBeInTheDocument();
   });
 });

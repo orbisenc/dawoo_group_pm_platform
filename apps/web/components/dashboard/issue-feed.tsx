@@ -6,9 +6,10 @@ import type { FormEvent } from "react";
 import { useProject } from "./project-context";
 
 type Comment = { author: string; body: string; time: string };
+type PostState = "의사결정" | "검토 중" | "검토 완료";
 type Post = {
   id: string;
-  state: string;
+  state: PostState;
   stateClass: string;
   category: string;
   title: string;
@@ -159,6 +160,13 @@ export function IssueFeed({
   const [newBody, setNewBody] = useState("");
   const [newCategory, setNewCategory] = useState("사업성");
   const [attachmentName, setAttachmentName] = useState("");
+  const [menuPostId, setMenuPostId] = useState<string | null>(null);
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editBody, setEditBody] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editState, setEditState] = useState<PostState>("검토 중");
+  const [editNotice, setEditNotice] = useState("");
 
   const updatePosts = (updater: (current: Post[]) => Post[]) => {
     setPostsByProject((current) => ({
@@ -239,6 +247,57 @@ export function IssueFeed({
     );
   };
 
+  const startEdit = (post: Post) => {
+    setEditingPostId(post.id);
+    setEditTitle(post.title);
+    setEditBody(post.body);
+    setEditCategory(post.category);
+    setEditState(post.state);
+    setEditNotice("");
+    setMenuPostId(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingPostId(null);
+    setEditTitle("");
+    setEditBody("");
+    setEditCategory("");
+  };
+
+  const saveEditedPost = (
+    event: FormEvent<HTMLFormElement>,
+    postId: string,
+  ) => {
+    event.preventDefault();
+    const title = editTitle.trim();
+    const body = editBody.trim();
+    if (!title || !body) return;
+
+    const stateClass =
+      editState === "의사결정"
+        ? "red"
+        : editState === "검토 완료"
+          ? "green"
+          : "orange";
+    updatePosts((current) =>
+      current.map((post) =>
+        post.id === postId
+          ? {
+              ...post,
+              title,
+              body,
+              category: editCategory,
+              state: editState,
+              stateClass,
+              time: "방금 전 · 수정됨",
+            }
+          : post,
+      ),
+    );
+    cancelEdit();
+    setEditNotice("게시물을 수정했습니다.");
+  };
+
   return (
     <section className={fullPage ? "issue-feed full-page" : "issue-feed"}>
       <div className="feed-heading">
@@ -277,6 +336,18 @@ export function IssueFeed({
           </button>
         ))}
       </div>
+      {editNotice ? (
+        <div className="issue-edit-notice" role="status">
+          {editNotice}
+          <button
+            type="button"
+            aria-label="수정 완료 안내 닫기"
+            onClick={() => setEditNotice("")}
+          >
+            ×
+          </button>
+        </div>
+      ) : null}
       <div className="feed-scroll">
         {composerOpen && (
           <form className="issue-composer" onSubmit={addPost}>
@@ -339,12 +410,104 @@ export function IssueFeed({
                 <em>{post.category}</em>
               </div>
               <time>{post.time}</time>
-              <button type="button" aria-label="게시물 메뉴">
-                ⋮
-              </button>
+              <div
+                className="post-menu"
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") setMenuPostId(null);
+                }}
+              >
+                <button
+                  type="button"
+                  aria-label={`${post.title} 게시물 메뉴`}
+                  aria-haspopup="menu"
+                  aria-expanded={menuPostId === post.id}
+                  onClick={() =>
+                    setMenuPostId((current) =>
+                      current === post.id ? null : post.id,
+                    )
+                  }
+                >
+                  ⋮
+                </button>
+                {menuPostId === post.id ? (
+                  <div className="post-menu-popover" role="menu">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => startEdit(post)}
+                    >
+                      <span aria-hidden="true">✎</span>
+                      게시물 수정
+                    </button>
+                  </div>
+                ) : null}
+              </div>
             </div>
-            <h3>{post.title}</h3>
-            <p>{post.body}</p>
+            {editingPostId === post.id ? (
+              <form
+                className="issue-edit-form"
+                onSubmit={(event) => saveEditedPost(event, post.id)}
+              >
+                <div>
+                  <strong>게시물 수정</strong>
+                  <span>제목과 검토 내용을 정확하게 수정해 주세요.</span>
+                </div>
+                <input
+                  aria-label={`${post.id} 게시물 제목 수정`}
+                  value={editTitle}
+                  onChange={(event) => setEditTitle(event.target.value)}
+                  maxLength={120}
+                  required
+                />
+                <textarea
+                  aria-label={`${post.id} 게시물 내용 수정`}
+                  value={editBody}
+                  onChange={(event) => setEditBody(event.target.value)}
+                  maxLength={2000}
+                  required
+                />
+                <div className="issue-edit-options">
+                  <label>
+                    <span>분류</span>
+                    <select
+                      aria-label={`${post.id} 게시물 분류 수정`}
+                      value={editCategory}
+                      onChange={(event) => setEditCategory(event.target.value)}
+                    >
+                      <option>사업성</option>
+                      <option>금융</option>
+                      <option>인허가</option>
+                      <option>운영</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>진행 상태</span>
+                    <select
+                      aria-label={`${post.id} 게시물 상태 수정`}
+                      value={editState}
+                      onChange={(event) =>
+                        setEditState(event.target.value as PostState)
+                      }
+                    >
+                      <option>검토 중</option>
+                      <option>의사결정</option>
+                      <option>검토 완료</option>
+                    </select>
+                  </label>
+                  <div>
+                    <button type="button" onClick={cancelEdit}>
+                      취소
+                    </button>
+                    <button type="submit">수정 저장</button>
+                  </div>
+                </div>
+              </form>
+            ) : (
+              <>
+                <h3>{post.title}</h3>
+                <p>{post.body}</p>
+              </>
+            )}
             <div className="post-author">
               <span className="mini-avatar">{post.author[0]}</span>
               <strong>{post.author}</strong>

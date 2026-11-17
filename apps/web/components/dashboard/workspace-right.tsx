@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { BuildingPreview } from "./building-preview";
 import { useProject } from "./project-context";
+import { TeamupCalendar } from "./teamup-calendar";
 
 const folders = [
   "01_사업관리",
@@ -19,30 +20,9 @@ const approvals = [
   ["승인 대기", "10월 기성금 지급 요청", "0/2"],
   ["승인 완료", "가설울타리 설치 검측", "완료"],
 ];
-const teamupCalendarUrl = "https://teamup.com/ks27cco3hv5g1ove7k";
-const teamupEmbedUrl = `${teamupCalendarUrl}?view=m&showHeader=0&showProfileAndInfo=0&showSidepanel=0&disableSidepanel=1&showViewSelector=0&showMenu=0&showDateControls=1&lang=ko&tz=Asia%2FSeoul`;
-
 export function WorkspaceRight() {
   const { selectedProject } = useProject();
   const [selectedFolder, setSelectedFolder] = useState("02_설계도서");
-  const [isCalendarExpanded, setIsCalendarExpanded] = useState(false);
-
-  useEffect(() => {
-    if (!isCalendarExpanded) return;
-
-    const previousOverflow = document.body.style.overflow;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsCalendarExpanded(false);
-    };
-
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", closeOnEscape);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [isCalendarExpanded]);
 
   return (
     <section className="workspace-right">
@@ -97,41 +77,7 @@ export function WorkspaceRight() {
             </span>
           </div>
         </section>
-        {isCalendarExpanded ? (
-          <button
-            type="button"
-            className="teamup-calendar-backdrop"
-            aria-label="확대된 주요 일정 닫기"
-            onClick={() => setIsCalendarExpanded(false)}
-          />
-        ) : null}
-        <section
-          className={`mini-panel mini-calendar teamup-calendar${
-            isCalendarExpanded ? " is-expanded" : ""
-          }`}
-        >
-          <div className="mini-heading">
-            <h3>주요 일정</h3>
-            <button
-              type="button"
-              aria-expanded={isCalendarExpanded}
-              aria-controls="teamup-main-calendar"
-              onClick={() => setIsCalendarExpanded((expanded) => !expanded)}
-            >
-              {isCalendarExpanded ? "↙ 원래 크기" : "⛶ 크게 보기"}
-            </button>
-          </div>
-          <div className="teamup-calendar-viewport">
-            <iframe
-              id="teamup-main-calendar"
-              className="teamup-calendar-frame"
-              src={teamupEmbedUrl}
-              title={`${selectedProject.name} Teamup 주요 일정`}
-              loading="lazy"
-              referrerPolicy="strict-origin-when-cross-origin"
-            />
-          </div>
-        </section>
+        <TeamupCalendar />
         <section className="mini-panel mini-approvals">
           <div className="mini-heading">
             <h3>승인 대기</h3>

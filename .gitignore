@@ -10,6 +10,7 @@ node_modules/
 
 # build and test output
 .next/
+apps/web/out/
 dist/
 coverage/
 test-results/
@@ -24,6 +25,8 @@ apps/api/src/generated/prisma/
 # logs and editor files
 *.log
 .logs/
+.firebase/
+firebase-debug.log
 .DS_Store
 Thumbs.db
 .idea/

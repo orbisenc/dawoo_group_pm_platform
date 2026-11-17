@@ -4,15 +4,15 @@
 
 ## 구성
 
-| 구성요소 | 기술 | 기본 주소 |
-| --- | --- | --- |
-| 웹 | Next.js 16, React 19, TypeScript | <http://localhost:3004> |
-| API | NestJS 11, Prisma | <http://localhost:4000/api/v1> |
-| API 문서 | OpenAPI / Swagger | <http://localhost:4000/api/docs> |
-| 데이터베이스 | PostgreSQL 17 | `localhost:5432` |
-| 캐시·작업 큐 | Redis 8, BullMQ | `localhost:6379` |
-| 파일 저장소 | MinIO(S3 호환) | <http://localhost:9000> |
-| MinIO 콘솔 | MinIO Console | <http://localhost:9001> |
+| 구성요소     | 기술                             | 기본 주소                        |
+| ------------ | -------------------------------- | -------------------------------- |
+| 웹           | Next.js 16, React 19, TypeScript | <http://localhost:3004>          |
+| API          | NestJS 11, Prisma                | <http://localhost:4000/api/v1>   |
+| API 문서     | OpenAPI / Swagger                | <http://localhost:4000/api/docs> |
+| 데이터베이스 | PostgreSQL 17                    | `localhost:5432`                 |
+| 캐시·작업 큐 | Redis 8, BullMQ                  | `localhost:6379`                 |
+| 파일 저장소  | MinIO(S3 호환)                   | <http://localhost:9000>          |
+| MinIO 콘솔   | MinIO Console                    | <http://localhost:9001>          |
 
 웹은 `/backend/*` 요청을 NestJS의 `/api/v1/*`로 전달합니다. 첫 화면의 **개발 환경 연결 상태** 카드가 `GET /api/v1/health`를 호출하여 실제 연결 여부를 표시합니다.
 
@@ -138,6 +138,8 @@ pnpm.cmd dev:web
 
 웹의 **공유 드라이브** 메뉴는 프로젝트별 독립 폴더 탐색, 전체 파일명 검색, 드래그 앤 드롭 업로드·이동, 업로드 진행률과 실패 재시도, 파일 업로드·다운로드, PDF/이미지 미리보기, 이름 변경, 삭제, 버전 이력과 이슈 연결을 지원합니다. API와 로컬 인프라가 실행 중이면 메타데이터는 PostgreSQL, 파일 원본은 비공개 S3 호환 저장소에 저장됩니다. API를 실행하지 않은 화면 확인 환경에서는 브라우저 로컬 저장 모드로 자동 전환되며 이 모드는 파일당 2MB로 제한됩니다.
 
+화면 상단의 저장소 선택에서 **Google Drive**로 전환하면 사용자의 Google 계정에 생성되는 PROJECT HUB 전용 폴더를 검색하고, 폴더 생성, 파일 업로드, 이름 변경, 열기 및 휴지통 이동을 수행할 수 있습니다. Firebase 외부 배포와 Google OAuth 설정 방법은 [Firebase Hosting 및 Google Drive 연동](docs/GOOGLE_DRIVE_FIREBASE.md)을 참고합니다.
+
 새 프로젝트의 기본 폴더는 `01_사업관리`, `02_토지계약`, `03_인허가`, `04_설계도면`, `05_금융PF`, `06_계약발주`, `07_공사공정`, `08_회의록`입니다.
 
 - `GET /api/v1/projects/:projectId/drive` — 현재 폴더 목록 또는 전체 검색
@@ -206,7 +208,7 @@ pnpm.cmd dev:web
 
 웹의 **일정** 메뉴는 월간·주간·목록형 보기를 제공하며 날짜를 선택해 해당 날짜의 일정만 확인할 수 있습니다. 일정에는 제목, 설명, 시작·종료, 종일 여부, 담당자·참여자, 그룹, 관련 이슈와 첨부파일, 사전 알림을 지정합니다. `토지계약`, `건축허가`, `착공`, `준공` 같은 마일스톤은 고정 코드가 아닌 프로젝트별 일반 데이터이므로 자유롭게 추가·수정·보관할 수 있습니다.
 
-통합 대시보드의 **주요 일정** 카드는 Teamup 공유 캘린더 `https://teamup.com/ksqk92wta8k5pyhkve`를 선명한 원본 배율의 월간 달력형으로 임베드합니다. 카드의 **크게 보기** 버튼으로 화면을 확대하고 **원래 크기** 버튼이나 `Esc` 키로 복원할 수 있습니다. 외부 노출 범위는 Teamup 공유 링크의 권한을 따르므로 운영 전 반드시 읽기 전용 링크인지 확인해야 합니다.
+통합 대시보드의 **주요 일정** 카드와 왼쪽 **일정** 메뉴는 같은 Teamup 공유 캘린더 `https://teamup.com/ks27cco3hv5g1ove7k`를 월간 달력형으로 임베드합니다. **크게 보기** 버튼으로 화면을 확대하고 **원래 크기** 버튼이나 `Esc` 키로 복원할 수 있으며, 일정 화면에서는 Teamup 원본 링크도 열 수 있습니다. 외부 노출 범위는 Teamup 공유 링크의 권한을 따르므로 운영 전 반드시 읽기 전용 링크인지 확인해야 합니다.
 
 - `GET|POST /api/v1/projects/:projectId/calendar` — 기간별 일정 조회·생성
 - `GET|PATCH|DELETE /api/v1/projects/:projectId/calendar/:eventId` — 일정 상세·수정·보관
@@ -295,37 +297,37 @@ project-hub/
 
 ## 주요 명령
 
-| 명령 | 설명 |
-| --- | --- |
-| `pnpm dev` | 웹과 API 동시 개발 실행 |
-| `pnpm infra:up` | 로컬 기반 서비스 실행 및 준비 대기 |
-| `pnpm infra:down` | 로컬 기반 서비스 중지 |
-| `pnpm infra:logs` | 컨테이너 로그 확인 |
-| `pnpm db:migrate` | 개발용 마이그레이션 생성·적용 |
-| `pnpm db:deploy` | 기존 마이그레이션 적용 |
-| `pnpm db:seed` | 개발용 기본 데이터 생성 |
-| `pnpm lint` | 전체 워크스페이스 ESLint 검사 |
-| `pnpm typecheck` | 전체 TypeScript 검사 |
-| `pnpm test` | 전체 단위·컴포넌트 테스트 |
-| `pnpm build` | 공통 계약, API, 웹 프로덕션 빌드 |
-| `pnpm check` | lint → typecheck → test → build 순차 실행 |
+| 명령              | 설명                                      |
+| ----------------- | ----------------------------------------- |
+| `pnpm dev`        | 웹과 API 동시 개발 실행                   |
+| `pnpm infra:up`   | 로컬 기반 서비스 실행 및 준비 대기        |
+| `pnpm infra:down` | 로컬 기반 서비스 중지                     |
+| `pnpm infra:logs` | 컨테이너 로그 확인                        |
+| `pnpm db:migrate` | 개발용 마이그레이션 생성·적용             |
+| `pnpm db:deploy`  | 기존 마이그레이션 적용                    |
+| `pnpm db:seed`    | 개발용 기본 데이터 생성                   |
+| `pnpm lint`       | 전체 워크스페이스 ESLint 검사             |
+| `pnpm typecheck`  | 전체 TypeScript 검사                      |
+| `pnpm test`       | 전체 단위·컴포넌트 테스트                 |
+| `pnpm build`      | 공통 계약, API, 웹 프로덕션 빌드          |
+| `pnpm check`      | lint → typecheck → test → build 순차 실행 |
 
 ## 환경변수
 
-| 변수 | 설명 |
-| --- | --- |
-| `WEB_PORT`, `API_PORT` | 웹/API 포트 |
-| `WEB_ORIGIN` | API CORS에서 허용할 웹 주소 |
-| `NEXT_PUBLIC_API_BASE_URL` | 브라우저가 호출할 API 프록시 경로 |
-| `NEXT_PUBLIC_API_SOCKET_URL` | 브라우저가 연결할 Socket.IO API 주소 |
-| `API_INTERNAL_URL` | Next.js 프록시가 연결할 NestJS 주소 |
-| `AUTH_TOKEN_SECRET` | API Bearer 토큰 HMAC 서명 비밀. 운영 환경에서 충분히 긴 임의 값 사용 |
-| `ENABLE_DEV_AUTH` | 로컬 시드 사용자 세션 활성화. 운영 환경에서는 반드시 비활성화 |
-| `DATABASE_URL` | PostgreSQL 연결 문자열 |
-| `REDIS_URL` | Redis/BullMQ 연결 문자열 |
-| `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET` | S3 호환 저장소 설정 |
-| `S3_ACCESS_KEY`, `S3_SECRET_KEY` | S3 로컬 접근 자격증명 |
-| `S3_FORCE_PATH_STYLE` | MinIO 경로 방식 사용 여부 |
+| 변수                                    | 설명                                                                 |
+| --------------------------------------- | -------------------------------------------------------------------- |
+| `WEB_PORT`, `API_PORT`                  | 웹/API 포트                                                          |
+| `WEB_ORIGIN`                            | API CORS에서 허용할 웹 주소                                          |
+| `NEXT_PUBLIC_API_BASE_URL`              | 브라우저가 호출할 API 프록시 경로                                    |
+| `NEXT_PUBLIC_API_SOCKET_URL`            | 브라우저가 연결할 Socket.IO API 주소                                 |
+| `API_INTERNAL_URL`                      | Next.js 프록시가 연결할 NestJS 주소                                  |
+| `AUTH_TOKEN_SECRET`                     | API Bearer 토큰 HMAC 서명 비밀. 운영 환경에서 충분히 긴 임의 값 사용 |
+| `ENABLE_DEV_AUTH`                       | 로컬 시드 사용자 세션 활성화. 운영 환경에서는 반드시 비활성화        |
+| `DATABASE_URL`                          | PostgreSQL 연결 문자열                                               |
+| `REDIS_URL`                             | Redis/BullMQ 연결 문자열                                             |
+| `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET` | S3 호환 저장소 설정                                                  |
+| `S3_ACCESS_KEY`, `S3_SECRET_KEY`        | S3 로컬 접근 자격증명                                                |
+| `S3_FORCE_PATH_STYLE`                   | MinIO 경로 방식 사용 여부                                            |
 
 ## 종료와 데이터 초기화
 
