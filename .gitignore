@@ -1,0 +1,30 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# environment and secrets
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# build and test output
+.next/
+dist/
+coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
+
+# generated clients and local data
+apps/api/src/generated/prisma/
+.minio/
+.postgres/
+
+# logs and editor files
+*.log
+.logs/
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
