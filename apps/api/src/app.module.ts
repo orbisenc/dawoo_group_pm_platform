@@ -12,6 +12,8 @@ import { DriveModule } from "./drive/drive.module";
 import { CalendarModule } from "./calendar/calendar.module";
 import { ApprovalModule } from "./approvals/approval.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
+import { ObservabilityModule } from "./observability/observability.module";
+import { AuditTrailModule } from "./observability/audit-trail.module";
 
 @Module({
   imports: [
@@ -30,6 +32,8 @@ import { DashboardModule } from "./dashboard/dashboard.module";
     ApprovalModule,
     DashboardModule,
     HealthModule,
+    ObservabilityModule,
+    AuditTrailModule,
   ],
 })
 export class AppModule {}

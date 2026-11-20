@@ -61,6 +61,6 @@ function redisConnection(urlValue: string) {
     },
     InfrastructureService,
   ],
-  exports: [PrismaService, InfrastructureService, BullModule],
+  exports: [PrismaService, InfrastructureService, BullModule, REDIS_CLIENT, S3_CLIENT],
 })
 export class InfrastructureModule {}

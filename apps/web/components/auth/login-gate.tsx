@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 
@@ -73,6 +74,11 @@ export function LoginGate({ children }: { children: ReactNode }) {
             <button className="auth-submit" type="submit" disabled={busy}>{busy ? "처리 중…" : mode === "login" ? "로그인" : "회원가입 신청"}</button>
           </form>
           <div className="auth-switch"><span>{mode === "login" ? "계정이 없으신가요?" : "이미 승인된 계정이 있나요?"}</span><button type="button" onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); setNotice(""); }}>{mode === "login" ? "회원가입 신청" : "로그인으로 돌아가기"}</button></div>
+          <nav className="auth-policy-links" aria-label="서비스 정책과 도움말">
+            <Link href="/privacy">개인정보 처리방침</Link>
+            <Link href="/terms">이용약관</Link>
+            <Link href="/help">사용자 도움말</Link>
+          </nav>
         </div>
       </section>
     </main>

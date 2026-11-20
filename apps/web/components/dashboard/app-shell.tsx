@@ -1,4 +1,7 @@
+"use client";
+
 import type { ReactNode } from "react";
+import { usePathname } from "next/navigation";
 
 import { AuthProvider } from "../auth/auth-context";
 import { LoginGate } from "../auth/login-gate";
@@ -7,6 +10,13 @@ import { TopHeader } from "./top-header";
 import { ProjectProvider } from "./project-context";
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const isPublicDocument = ["/privacy", "/terms", "/help"].some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`),
+  );
+
+  if (isPublicDocument) return children;
+
   return (
     <AuthProvider>
       <LoginGate>

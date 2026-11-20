@@ -22,9 +22,15 @@
     "test": "pnpm -r --if-present test",
     "build": "pnpm -r --if-present build",
     "build:firebase": "node scripts/build-firebase.mjs",
-    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+    "test:e2e:web": "playwright test",
+    "test:e2e:web:ui": "playwright test --ui",
+    "test:performance": "node scripts/performance-baseline.mjs",
+    "check:security": "pnpm audit --audit-level high",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "check:launch": "pnpm check && pnpm test:e2e:web"
   },
   "devDependencies": {
+    "@playwright/test": "1.56.1",
     "prettier": "3.6.2",
     "typescript": "5.9.3"
   }

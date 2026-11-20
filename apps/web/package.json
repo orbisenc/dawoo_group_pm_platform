@@ -15,7 +15,7 @@
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.2",
     "dotenv": "17.2.3",
-    "next": "16.4.3",
+    "next": "16.4.6",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "socket.io-client": "4.8.1",
@@ -29,9 +29,9 @@
     "@types/react-dom": "19.2.2",
     "@types/three": "^0.186.0",
     "eslint": "9.39.1",
-    "eslint-config-next": "16.4.3",
+    "eslint-config-next": "16.4.6",
     "jsdom": "27.0.1",
     "typescript": "5.9.3",
-    "vitest": "4.0.17"
+    "vitest": "4.1.0"
   }
 }

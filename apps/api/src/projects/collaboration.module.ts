@@ -18,6 +18,11 @@ import { CollaborationService } from "./collaboration.service";
     PrismaCollaborationRepository,
     { provide: CollaborationRepository, useExisting: PrismaCollaborationRepository },
   ],
-  exports: [CollaborationService],
+  exports: [
+    CollaborationService,
+    CollaborationRepository,
+    AuthTokenService,
+    ApiAuthGuard,
+  ],
 })
 export class CollaborationModule {}

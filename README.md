@@ -1,6 +1,6 @@
 # PROJECT HUB
 
-건설 개발사업 참여자를 위한 웹 기반 프로젝트 협업 플랫폼입니다. 현재 저장소는 로드맵 **단계 2: 인증·조직·프로젝트**의 프로젝트·협업 그룹 권한 기반을 구현합니다.
+건설 개발사업 참여자를 위한 웹 기반 프로젝트 협업 플랫폼입니다. 현재 저장소는 로드맵 **단계 8: MVP 안정화와 출시 준비**를 진행 중이며, 단계 1~7의 기능과 권한 기반을 전체 회귀 테스트·운영 검증 대상으로 다룹니다. 출시 판정과 남은 외부 검증은 [출시 준비 증적](docs/LAUNCH_READINESS.md)을 기준으로 확인합니다.
 
 ## 구성
 
@@ -11,8 +11,8 @@
 | API 문서     | OpenAPI / Swagger                | <http://localhost:4000/api/docs> |
 | 데이터베이스 | PostgreSQL 17                    | `localhost:5432`                 |
 | 캐시·작업 큐 | Redis 8, BullMQ                  | `localhost:6379`                 |
-| 파일 저장소  | MinIO(S3 호환)                   | <http://localhost:9000>          |
-| MinIO 콘솔   | MinIO Console                    | <http://localhost:9001>          |
+| 파일 저장소  | RustFS(S3 호환)                  | <http://localhost:9000>          |
+| 저장소 콘솔  | RustFS Console                   | <http://localhost:9001>          |
 
 웹은 `/backend/*` 요청을 NestJS의 `/api/v1/*`로 전달합니다. 첫 화면의 **개발 환경 연결 상태** 카드가 `GET /api/v1/health`를 호출하여 실제 연결 여부를 표시합니다.
 
@@ -48,7 +48,7 @@ cp .env.example .env
 pnpm.cmd install
 ```
 
-### 3. PostgreSQL, Redis, MinIO 실행
+### 3. PostgreSQL, Redis, RustFS 실행
 
 ```powershell
 pnpm.cmd infra:up
@@ -60,7 +60,7 @@ pnpm.cmd infra:up
 docker compose ps
 ```
 
-`postgres`, `redis`, `minio`가 healthy이고 `minio-init`가 종료 코드 0이면 정상입니다. `minio-init`는 비공개 `project-hub-local` 버킷을 한 번 생성하고 종료합니다.
+`postgres`, `redis`, `object-storage`가 실행 중이고 `object-storage-init`가 종료 코드 0이면 정상입니다. 초기화 컨테이너는 비공개 `project-hub-local` 버킷을 한 번 생성하고 종료합니다.
 
 ### 4. 데이터베이스 마이그레이션과 시드
 
@@ -94,7 +94,7 @@ pnpm.cmd dev:web
 
 ### 프로젝트 협업 API
 
-보호 API는 `Authorization: Bearer <서명 토큰>`을 요구합니다. 토큰은 `AUTH_TOKEN_SECRET`으로 HMAC 서명되고 만료시간을 검증하며, 요청 본문의 사용자·역할·조직 값은 권한 근거로 사용하지 않습니다. 현재 단계에서는 토큰 검증 기반을 제공하며 로그인·토큰 발급 화면은 단계 2의 후속 작업입니다.
+보호 API는 `Authorization: Bearer <서명 토큰>`을 요구합니다. 토큰은 `AUTH_TOKEN_SECRET`으로 HMAC 서명되고 만료시간을 검증하며, 요청 본문의 사용자·역할·조직 값은 권한 근거로 사용하지 않습니다. 회원가입 승인, 로그인·로그아웃과 현재 사용자 조회가 구현되어 있습니다.
 
 로컬 웹 피드 확인을 위해 `.env.example`은 `ENABLE_DEV_AUTH=true`를 사용합니다. 이때 `admin@projecthub.local` 시드 사용자로 8시간 개발 세션을 발급합니다. 개발 세션 API는 `NODE_ENV=production`이거나 플래그가 꺼져 있으면 `404`이며 운영 인증 수단으로 사용할 수 없습니다.
 
@@ -153,34 +153,6 @@ pnpm.cmd dev:web
 - `PATCH|DELETE .../files/:fileId` — 이름·위치 변경 및 소프트 삭제
 
 모든 폴더·파일 쿼리는 URL의 `projectId`를 포함합니다. 읽기 전용 역할은 변경 요청이 거부됩니다. 폴더에 그룹을 지정하면 해당 그룹 참여자만 접근하고 권한은 모든 하위 폴더와 파일에 상속됩니다. 관리자 제한 폴더와 접근할 수 없는 그룹 폴더의 존재는 목록·검색·다운로드에서 모두 숨깁니다. 변경본은 기존 객체를 덮어쓰지 않고 새 `DriveFileVersion`과 새 객체 키로 저장합니다.
-
-### 프로젝트 문서 전자결재
-
-웹의 **결재** 메뉴에서 공유 드라이브 문서를 선택해 기안을 저장하고, 순차 결재선을 지정해 상신할 수 있습니다. 상신 시 선택한 `DriveFileVersion`, 객체 키, 파일 크기·형식과 SHA-256 해시를 `ApprovalRevision`에 복제하여 고정하므로 공유 드라이브에 새 버전이 등록되어도 이미 상신한 결재 자료는 바뀌지 않습니다. 반려 문서는 수정 후 새 리비전으로 재상신할 수 있고 이전 결재 자료와 처리 이력은 유지됩니다.
-
-- `GET|POST /api/v1/projects/:projectId/approvals` — 접근 가능한 결재 목록·기안 작성
-- `GET|PATCH /api/v1/projects/:projectId/approvals/:documentId` — 상세 조회·기안/반려/회수 문서 수정
-- `POST .../approvals/:documentId/submit` — 문서 버전·해시 고정 후 상신 또는 재상신
-- `POST .../approvals/:documentId/approve|reject` — 현재 순번 지정 결재자의 승인·반려
-- `POST .../approvals/:documentId/withdraw` — 기안자의 첫 승인 전 회수
-- `GET .../approvals?scope=pending` — 내 결재 대기 목록
-- `GET|PATCH .../approvals/notifications/...` — 결재 요청·처리 알림 조회와 읽음 처리
-
-승인·반려는 현재 활성 순번과 지정 사용자를 서버에서 검사하며, 관리자도 대신 처리할 수 없습니다. 상태 변경, 단계 처리, 이력, 알림과 감사 로그는 같은 DB 트랜잭션에 기록됩니다. 병렬 결재와 법적 전자서명은 아직 지원하지 않습니다. 스키마 적용에는 `pnpm.cmd db:deploy`를 실행합니다.
-
-### 프로젝트 문서 전자결재
-
-웹의 **결재** 메뉴에서 공유 드라이브 문서를 선택해 기안을 저장하고, 순차 결재선을 지정해 상신할 수 있습니다. 상신 시 선택한 `DriveFileVersion`, 객체 키, 파일 크기·형식과 SHA-256 해시를 `ApprovalRevision`에 복제하여 고정하므로 공유 드라이브에 새 버전이 등록되어도 이미 상신한 결재 자료는 바뀌지 않습니다. 반려 문서는 수정 후 새 리비전으로 재상신할 수 있고 이전 결재 자료와 처리 이력은 유지됩니다.
-
-- `GET|POST /api/v1/projects/:projectId/approvals` — 접근 가능한 결재 목록·기안 작성
-- `GET|PATCH /api/v1/projects/:projectId/approvals/:documentId` — 상세 조회·기안/반려/회수 문서 수정
-- `POST .../approvals/:documentId/submit` — 문서 버전·해시 고정 후 상신 또는 재상신
-- `POST .../approvals/:documentId/approve|reject` — 현재 순번 지정 결재자의 승인·반려
-- `POST .../approvals/:documentId/withdraw` — 기안자의 첫 승인 전 회수
-- `GET .../approvals?scope=pending` — 내 결재 대기 목록
-- `GET|PATCH .../approvals/notifications/...` — 결재 요청·처리 알림 조회와 읽음 처리
-
-승인·반려는 현재 활성 순번과 지정 사용자를 서버에서 검사하며, 관리자도 대신 처리할 수 없습니다. 상태 변경, 단계 처리, 이력, 알림과 감사 로그는 같은 DB 트랜잭션에 기록됩니다. 병렬 결재와 법적 전자서명은 아직 지원하지 않습니다. 스키마 적용에는 `pnpm.cmd db:deploy`를 실행합니다.
 
 ### 프로젝트 문서 전자결재
 
@@ -277,6 +249,17 @@ API HTTP E2E 테스트:
 pnpm.cmd --filter @project-hub/api test:e2e
 ```
 
+브라우저 E2E와 출시 전체 게이트:
+
+```powershell
+pnpm.cmd exec playwright install chromium
+pnpm.cmd test:e2e:web
+pnpm.cmd check:launch
+pnpm.cmd check:security
+```
+
+성능 기준선은 API 실행 후 `pnpm.cmd test:performance`로 측정합니다. 기본값은 동시 요청 20개, 경로당 500회, p95 500ms이며 `PERF_BASE_URL`, `PERF_PATHS`, `PERF_REQUESTS`, `PERF_CONCURRENCY`, `PERF_P95_LIMIT_MS`, `PERF_BEARER_TOKEN`으로 변경할 수 있습니다.
+
 기반 서비스 연결을 포함한 수동 스모크 테스트는 Docker 서비스를 실행한 뒤 `/health/ready`와 웹 연결 카드를 확인합니다.
 
 ## 프로젝트 구조
@@ -288,8 +271,10 @@ project-hub/
 │  └─ api/                    # NestJS API, Prisma 스키마·마이그레이션
 ├─ packages/
 │  └─ contracts/              # 웹/API 공용 응답 계약
-├─ docs/                      # PRD, 아키텍처, 권한, 로드맵
-├─ compose.yaml               # PostgreSQL, Redis, MinIO
+├─ docs/                      # 제품·아키텍처·권한·로드맵·운영·출시 문서
+├─ e2e/                       # Playwright 브라우저 출시 회귀
+├─ scripts/                   # 빌드, 성능, 백업·복구 자동화
+├─ compose.yaml               # PostgreSQL, Redis, RustFS(S3 호환)
 ├─ .env.example
 ├─ pnpm-workspace.yaml
 └─ AGENTS.md
@@ -311,6 +296,10 @@ project-hub/
 | `pnpm test`       | 전체 단위·컴포넌트 테스트                 |
 | `pnpm build`      | 공통 계약, API, 웹 프로덕션 빌드          |
 | `pnpm check`      | lint → typecheck → test → build 순차 실행 |
+| `pnpm test:e2e:web` | Playwright 데스크톱·모바일 E2E          |
+| `pnpm check:launch` | 전체 검사 후 브라우저 E2E 실행           |
+| `pnpm check:security` | 높음 이상 의존성 취약점 감사           |
+| `pnpm test:performance` | 핵심 API p95 성능 기준선 측정         |
 
 ## 환경변수
 
@@ -323,11 +312,22 @@ project-hub/
 | `API_INTERNAL_URL`                      | Next.js 프록시가 연결할 NestJS 주소                                  |
 | `AUTH_TOKEN_SECRET`                     | API Bearer 토큰 HMAC 서명 비밀. 운영 환경에서 충분히 긴 임의 값 사용 |
 | `ENABLE_DEV_AUTH`                       | 로컬 시드 사용자 세션 활성화. 운영 환경에서는 반드시 비활성화        |
+| `METRICS_TOKEN`                         | 보호된 운영 메트릭 엔드포인트 접근 토큰                              |
 | `DATABASE_URL`                          | PostgreSQL 연결 문자열                                               |
 | `REDIS_URL`                             | Redis/BullMQ 연결 문자열                                             |
 | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET` | S3 호환 저장소 설정                                                  |
 | `S3_ACCESS_KEY`, `S3_SECRET_KEY`        | S3 로컬 접근 자격증명                                                |
-| `S3_FORCE_PATH_STYLE`                   | MinIO 경로 방식 사용 여부                                            |
+| `S3_FORCE_PATH_STYLE`                   | S3 호환 저장소 경로 방식 사용 여부                                   |
+
+## 출시·운영 문서
+
+- [출시 준비 증적과 MVP 수용 기준](docs/LAUNCH_READINESS.md)
+- [운영 런북](docs/OPERATIONS.md)
+- [배포와 롤백](docs/DEPLOYMENT.md)
+- [장애 대응](docs/INCIDENT_RESPONSE.md)
+- [데이터 보존·삭제와 백업 복구](docs/DATA_RETENTION.md)
+- [Google Drive 및 Firebase 검증](docs/GOOGLE_DRIVE_FIREBASE.md)
+- [스테이징 UAT](docs/UAT.md)
 
 ## 종료와 데이터 초기화
 
@@ -337,7 +337,7 @@ project-hub/
 pnpm.cmd infra:down
 ```
 
-볼륨 삭제는 PostgreSQL과 MinIO의 로컬 데이터를 모두 제거하는 파괴적 작업이므로 필요한 경우에만 대상 데이터를 확인한 뒤 직접 수행하세요.
+볼륨 삭제는 PostgreSQL과 RustFS의 로컬 데이터를 모두 제거하는 파괴적 작업이므로 필요한 경우에만 대상 데이터를 확인한 뒤 직접 수행하세요.
 
 ## 문제 해결
 

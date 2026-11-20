@@ -6,6 +6,7 @@ import { DriveService } from "../drive/drive.service";
 import { InputSecurityService } from "../feed/input-security.service";
 import type { Actor } from "../projects/collaboration.types";
 import { CollaborationService } from "../projects/collaboration.service";
+import { RequestContextService } from "../observability/request-context.service";
 import type { ApprovalListDto, CreateApprovalDto, CreateApprovalRouteTemplateDto, UpdateApprovalDto, UpdateApprovalRouteTemplateDto } from "./approval.dto";
 
 const detailInclude = {
@@ -19,7 +20,13 @@ const detailInclude = {
 
 @Injectable()
 export class ApprovalService {
-  constructor(private readonly prisma: PrismaService, private readonly collaboration: CollaborationService, private readonly drive: DriveService, private readonly security: InputSecurityService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly collaboration: CollaborationService,
+    private readonly drive: DriveService,
+    private readonly security: InputSecurityService,
+    private readonly requestContext: RequestContextService,
+  ) {}
 
   async list(actor: Actor, projectId: string, dto: ApprovalListDto) {
     const projectMember = await this.hasProjectAccess(actor, projectId);
@@ -286,7 +293,7 @@ export class ApprovalService {
   }
 
   private audit(tx: Prisma.TransactionClient, actorId: string, projectId: string, resourceId: string, action: string, summary: Prisma.InputJsonObject, resourceType = "ApprovalDocument") {
-    return tx.auditLog.create({ data: { actorId, projectId, resourceId, resourceType, action, summary } });
+    return tx.auditLog.create({ data: { actorId, projectId, resourceId, resourceType, action, requestId: this.requestContext.getRequestId(), summary } });
   }
 
   private serialize<T extends { fileVersion: { size: bigint } | null; revisions: Array<{ sizeSnapshot: bigint | null }> }>(document: T) {
