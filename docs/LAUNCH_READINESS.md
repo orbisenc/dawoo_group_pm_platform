@@ -56,6 +56,7 @@
 | 백업·복구 자동화 | 완료 | `scripts/backup.ps1`, `scripts/restore-rehearsal.ps1`, `DATA_RETENTION.md` | 아니오 |
 | PostgreSQL 복원과 객체 메타데이터 대조 리허설 | 완료(로컬 격리 환경) | 2026. 11. 20. PostgreSQL 임시 DB 복원, 사용자 2·프로젝트 1·감사 로그 4건 조회, 실제 `AVAILABLE` 객체 1건 대조 통과 | 운영 환경 재확인 필요 |
 | 배포·롤백 절차 | 완료(문서) | `DEPLOYMENT.md` | 스테이징 리허설 전까지 예 |
+| Firebase 정적 웹 배포 | 완료 | 2026. 11. 20. Git `2ed3c91`, 라이브 릴리스 `1795154741365000`, 버전 `8a5cbbe77cbdb586` 배포 후 `/`, `/privacy/`, `/terms/`, `/help/` HTTP 200 확인 | API 스테이징과 별도 |
 | 스테이징 배포·롤백·장애 대응 실행 | 확인 불가 | 스테이징 대상과 배포 권한이 필요하다. | 예 |
 
 ## 5. 개인정보·정책·도움말
@@ -82,6 +83,7 @@ pnpm.cmd test:performance
 - 브라우저 E2E: 2026. 11. 20. 로컬 Chrome의 데스크톱·모바일 프로젝트 6건 통과.
 - 보안 의존성 검사: 2026. 11. 20. `pnpm.cmd check:security` 통과. critical/high 0건, moderate 6건. moderate 항목은 출시 전 위험 수용 또는 업데이트 계획이 필요하다.
 - Docker Desktop 4.99.0, WSL 3.0.5, PostgreSQL 17, Redis 8, RustFS S3 호환 저장소를 설치·기동하고 마이그레이션 12건과 시드를 적용했다.
+- Firebase Hosting 라이브 채널에 Git `2ed3c91`의 정적 웹 94개 파일을 배포했고 외부 URL과 정책·도움말 경로의 HTTP 200 응답을 확인했다. 상세 증적은 `deployments/2026-11-20-firebase-hosting.md`에 기록했다.
 - 로컬 성능 기준과 실제 객체 1건을 포함한 복구 리허설은 통과했다. Google 앱 OAuth·서비스 계정과 외부 API 스테이징 UAT는 아직 실행 증적이 없다.
 
 ## 우선순위 작업 목록
