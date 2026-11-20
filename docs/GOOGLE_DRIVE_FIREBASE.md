@@ -5,7 +5,10 @@
 - Firebase Hosting은 `apps/web/out`의 Next.js 정적 내보내기 결과를 배포한다.
 - 로컬 개발에서는 기존 `/backend` 재작성을 통해 NestJS API를 사용한다.
 - Firebase 정적 배포에서는 API가 필요한 기존 기능이 브라우저 로컬 대체 모드로 동작한다.
+- `build:firebase`는 비용 없는 기능 확인을 위해 `NEXT_PUBLIC_ENABLE_TEST_AUTH=true`를 설정한다. 이 모드는 서버 인증이나 실제 권한 부여가 아니며 데이터는 해당 브라우저에만 저장된다.
 - Google Drive 기능은 브라우저에서 Google Drive API를 직접 호출한다.
+
+정적 데모에는 운영 계정, 개인정보, 계약서나 실제 사업 파일을 입력하지 않는다. API 배포를 시작할 때는 테스트 인증 플래그를 제거하고 서버 인증·권한 검사를 사용해야 한다.
 
 ## Google Cloud 설정
 
@@ -49,6 +52,7 @@ npx.cmd --yes firebase-tools@latest projects:list
 | --- | --- | --- |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Google Drive 연동 시 필수 | Google OAuth 웹 클라이언트 ID |
 | `FIREBASE_STATIC_EXPORT` | 빌드 스크립트가 자동 설정 | Next.js 정적 내보내기 활성화 |
+| `NEXT_PUBLIC_ENABLE_TEST_AUTH` | 정적 데모에서만 사용 | 브라우저 로컬 테스트 로그인 활성화. 운영에서는 `false` |
 
 ## 출시 전 실제 Google 테스트 계정 검증
 

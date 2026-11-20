@@ -55,6 +55,10 @@ const accountsStorageKey = "project-hub-local-accounts";
 const localAdminHash = "96cae35ce8a9b0244178bf28e4966c2ce1b8385723a96a6b838858cdd6ca0a1e";
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function testAuthEnabled() {
+  return process.env.NEXT_PUBLIC_ENABLE_TEST_AUTH === "true";
+}
+
 async function errorMessage(response: Response) {
   const body = await response.json().catch(() => null) as { message?: string | string[] } | null;
   if (Array.isArray(body?.message)) return body.message.join(" ");
@@ -114,6 +118,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (username: string, password: string) => {
+    if (testAuthEnabled()) {
+      const account = readLocalAccounts().find((item) => item.username === username.trim().toLowerCase());
+      if (!account || account.passwordHash !== await sha256(password)) throw new Error("아이디 또는 비밀번호가 올바르지 않습니다.");
+      if (account.approvalStatus === "PENDING") throw new Error("관리자 승인 대기 중인 계정입니다.");
+      if (account.approvalStatus === "REJECTED") throw new Error("회원가입 신청이 승인되지 않았습니다.");
+      const localUser: AuthUser = { id: account.id, username: account.username, email: account.email, name: account.name, platformRole: account.platformRole };
+      const localToken = `local:${account.id}`;
+      window.sessionStorage.setItem(tokenStorageKey, localToken);
+      window.sessionStorage.setItem(userStorageKey, JSON.stringify(localUser));
+      setToken(localToken);
+      setUser(localUser);
+      return;
+    }
     try {
       const response = await fetch("/backend/auth/login", {
         method: "POST",
@@ -143,6 +160,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const register = useCallback(async (input: { name: string; username: string; email: string; password: string }) => {
+    if (testAuthEnabled()) {
+      const accounts = readLocalAccounts();
+      const username = input.username.trim().toLowerCase();
+      const email = input.email.trim().toLowerCase();
+      if (accounts.some((account) => account.username === username || account.email === email)) throw new Error("이미 사용 중인 아이디 또는 이메일입니다.");
+      accounts.push({ id: `local-${crypto.randomUUID()}`, username, email, name: input.name.trim(), passwordHash: await sha256(input.password), approvalStatus: "PENDING", platformRole: "USER", createdAt: new Date().toISOString() });
+      saveLocalAccounts(accounts);
+      return "회원가입 신청이 접수되었습니다. 관리자 승인 후 로그인할 수 있습니다.";
+    }
     try {
       const response = await fetch("/backend/auth/register", {
         method: "POST",

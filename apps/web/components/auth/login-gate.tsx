@@ -63,6 +63,7 @@ export function LoginGate({ children }: { children: ReactNode }) {
             <h2>{mode === "login" ? "로그인" : "회원가입 신청"}</h2>
             <p>{mode === "login" ? "승인된 계정으로 로그인해 주세요." : "신청 후 관리자 승인이 완료되어야 로그인할 수 있습니다."}</p>
           </header>
+          {process.env.NEXT_PUBLIC_ENABLE_TEST_AUTH === "true" ? <div className="auth-notice" role="status">테스트용 로그인 모드입니다. 입력한 데이터는 이 브라우저에만 저장됩니다.</div> : null}
           {notice ? <div className="auth-notice" role="status">{notice}</div> : null}
           {error ? <div className="auth-error" role="alert">{error}</div> : null}
           <form onSubmit={submit}>

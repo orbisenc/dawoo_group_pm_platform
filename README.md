@@ -309,6 +309,7 @@ project-hub/
 | `WEB_ORIGIN`                            | API CORS에서 허용할 웹 주소                                          |
 | `NEXT_PUBLIC_API_BASE_URL`              | 브라우저가 호출할 API 프록시 경로                                    |
 | `NEXT_PUBLIC_API_SOCKET_URL`            | 브라우저가 연결할 Socket.IO API 주소                                 |
+| `NEXT_PUBLIC_ENABLE_TEST_AUTH`          | 정적 데모의 브라우저 로컬 인증. 운영 배포에서는 반드시 `false`        |
 | `API_INTERNAL_URL`                      | Next.js 프록시가 연결할 NestJS 주소                                  |
 | `AUTH_TOKEN_SECRET`                     | API Bearer 토큰 HMAC 서명 비밀. 운영 환경에서 충분히 긴 임의 값 사용 |
 | `ENABLE_DEV_AUTH`                       | 로컬 시드 사용자 세션 활성화. 운영 환경에서는 반드시 비활성화        |

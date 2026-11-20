@@ -7,6 +7,7 @@ const result = spawnSync(command, ["--filter", "@project-hub/web", "build"], {
   env: {
     ...process.env,
     FIREBASE_STATIC_EXPORT: "true",
+    NEXT_PUBLIC_ENABLE_TEST_AUTH: "true",
   },
 });
 

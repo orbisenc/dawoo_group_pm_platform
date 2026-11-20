@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AdminRegistrations } from "./admin-registrations";
 import { AuthProvider, useAuth } from "./auth-context";
@@ -24,9 +24,14 @@ function ProtectedArea() {
 
 describe("로그인 및 회원가입 승인 화면", () => {
   beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_ENABLE_TEST_AUTH", "true");
     Object.defineProperty(window, "localStorage", { configurable: true, value: storageMock() });
     Object.defineProperty(window, "sessionStorage", { configurable: true, value: storageMock() });
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 502 })));
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it("로그인 전에는 보호 화면을 숨기고 관리자 로그인 후 표시한다", async () => {
@@ -38,6 +43,17 @@ describe("로그인 및 회원가입 승인 화면", () => {
     fireEvent.click(screen.getByRole("button", { name: "로그인" }));
     expect(await screen.findByText("보호된 대시보드")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /가입 승인/ })).toBeInTheDocument();
+  });
+
+  it("테스트 인증 플래그가 꺼지면 로컬 관리자 인증으로 우회하지 않는다", async () => {
+    vi.stubEnv("NEXT_PUBLIC_ENABLE_TEST_AUTH", "false");
+    vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 404 }));
+    render(<AuthProvider><LoginGate><ProtectedArea /></LoginGate></AuthProvider>);
+    fireEvent.change(await screen.findByLabelText("아이디"), { target: { value: "dawooadmin" } });
+    fireEvent.change(screen.getByLabelText("비밀번호"), { target: { value: "123123" } });
+    fireEvent.click(screen.getByRole("button", { name: "로그인" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("요청을 처리하지 못했습니다.");
+    expect(screen.queryByText("보호된 대시보드")).not.toBeInTheDocument();
   });
 
   it("회원가입 신청은 관리자 승인 전 로그인을 막고 승인 후 허용한다", async () => {
