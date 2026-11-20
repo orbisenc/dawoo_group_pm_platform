@@ -1,17 +1,25 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   ApprovalWorkspace,
   CalendarWorkspace,
   DriveWorkspace,
 } from "./functional-workspaces";
+import { AuthProvider } from "../auth/auth-context";
 import { ProjectProvider } from "./project-context";
 
 const renderCalendar = () =>
   render(
     <ProjectProvider>
       <CalendarWorkspace />
+    </ProjectProvider>,
+  );
+
+const renderApproval = () =>
+  render(
+    <ProjectProvider>
+      <ApprovalWorkspace />
     </ProjectProvider>,
   );
 
@@ -27,27 +35,30 @@ describe("기능형 업무 화면", () => {
         clear: () => values.clear(),
       },
     });
-  });
-  it("공유 드라이브에 파일을 추가하고 로컬에 유지한다", async () => {
-    render(<DriveWorkspace />);
-    await screen.findByText(/로컬 저장 모드/);
-    const input = screen.getByLabelText("+ 파일 업로드");
-    const file = new File(["sample"], "현장점검사진.jpg", {
-      type: "image/jpeg",
+    const sessionValues = new Map<string, string>();
+    Object.defineProperty(window, "sessionStorage", {
+      configurable: true,
+      value: {
+        getItem: (key: string) => sessionValues.get(key) ?? null,
+        setItem: (key: string, value: string) => sessionValues.set(key, value),
+        removeItem: (key: string) => sessionValues.delete(key),
+        clear: () => sessionValues.clear(),
+      },
     });
-    fireEvent.change(input, { target: { files: [file] } });
-    await waitFor(() => expect(screen.getByText("100%")).toBeInTheDocument());
-    expect(screen.getAllByText("현장점검사진.jpg").length).toBeGreaterThan(0);
-    expect(
-      window.localStorage.getItem(
-        "project-hub:drive:v2:30000000-0000-4000-8000-000000000001",
-      ),
-    ).toContain("현장점검사진.jpg");
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/auth/dev-session")) return new Response(JSON.stringify({ accessToken: "signed-token", user: { id: "20000000-0000-4000-8000-000000000002", name: "박민수" } }), { status: 201 });
+      if (url.includes("/approvals/context")) return new Response(JSON.stringify({ files: [], members: [
+        { user: { id: "20000000-0000-4000-8000-000000000002", name: "박민수" }, role: "PARTICIPANT", projectMember: true },
+        { user: { id: "20000000-0000-4000-8000-000000000003", name: "김승인" }, role: "APPROVED_USER", projectMember: false },
+      ] }), { status: 200 });
+      if (url.includes("/approvals/route-templates")) return new Response(JSON.stringify(options?.method === "POST" ? { id: "template-1" } : []), { status: options?.method === "POST" ? 201 : 200 });
+      if (url.includes("/approvals?scope=all")) return new Response(JSON.stringify({ items: [] }), { status: 200 });
+      return new Response(JSON.stringify({ message: "테스트에서 처리하지 않은 요청입니다." }), { status: 404 });
+    }));
   });
-
-  it("Google Drive 저장소 전환과 OAuth 설정 안내를 제공한다", () => {
+  it("예시 저장소 없이 Google Drive 연결만 제공한다", () => {
     render(<DriveWorkspace />);
-    fireEvent.click(screen.getByRole("button", { name: "Google Drive" }));
 
     expect(
       screen.getByRole("heading", { name: "Google Drive 연동 준비" }),
@@ -55,55 +66,8 @@ describe("기능형 업무 화면", () => {
     expect(
       screen.getByText("NEXT_PUBLIC_GOOGLE_CLIENT_ID"),
     ).toBeInTheDocument();
-  });
-
-  it("표준 프로젝트 폴더와 그룹 전용 폴더를 제공한다", async () => {
-    render(<DriveWorkspace />);
-    await screen.findByText(/로컬 저장 모드/);
-    for (const name of [
-      "01_사업관리",
-      "02_토지계약",
-      "03_인허가",
-      "04_설계도면",
-      "05_금융PF",
-      "06_계약발주",
-      "07_공사공정",
-      "08_회의록",
-    ])
-      expect(screen.getAllByText(name).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole("button", { name: "＋ 새 폴더" }));
-    fireEvent.change(screen.getByLabelText("새 폴더 이름"), {
-      target: { value: "협력사 자료" },
-    });
-    fireEvent.change(screen.getByLabelText("폴더 접근 그룹"), {
-      target: { value: "40000000-0000-4000-8000-000000000001" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "만들기" }));
-    await waitFor(() =>
-      expect(screen.getAllByText("협력사 자료").length).toBeGreaterThan(0),
-    );
-    expect(
-      window.localStorage.getItem(
-        "project-hub:drive:v2:30000000-0000-4000-8000-000000000001",
-      ),
-    ).toContain("40000000-0000-4000-8000-000000000001");
-  });
-
-  it("공유 드라이브에 폴더를 만들고 진입한다", async () => {
-    render(<DriveWorkspace />);
-    await screen.findByText(/로컬 저장 모드/);
-    fireEvent.click(screen.getByRole("button", { name: "＋ 새 폴더" }));
-    fireEvent.change(screen.getByLabelText("새 폴더 이름"), {
-      target: { value: "06_준공자료" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "만들기" }));
-    await waitFor(() =>
-      expect(screen.getAllByText("06_준공자료").length).toBeGreaterThan(0),
-    );
-    fireEvent.click(screen.getAllByRole("button", { name: /06_준공자료/ })[0]!);
-    await waitFor(() =>
-      expect(screen.getByText("표시할 파일이 없습니다.")).toBeInTheDocument(),
-    );
+    expect(screen.queryByRole("button", { name: "PROJECT HUB" })).not.toBeInTheDocument();
+    expect(screen.queryByText("01_사업관리")).not.toBeInTheDocument();
   });
 
   it("일정 탭에 통합 대시보드와 같은 Teamup 캘린더를 표시한다", () => {
@@ -137,36 +101,79 @@ describe("기능형 업무 화면", () => {
     );
   });
 
-  it("선택한 결재 문서를 승인한다", async () => {
-    render(<ApprovalWorkspace />);
-    expect(
-      (await screen.findAllByText("커튼월 업체 선정 품의")).length,
-    ).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole("button", { name: "승인" }));
-    await waitFor(() =>
-      expect(
-        screen.getByText("현재 결재 단계를 승인했습니다."),
-      ).toBeInTheDocument(),
-    );
-    expect(screen.getByText("이수현")).toBeInTheDocument();
+  it("예시 결재 없이 실제 API의 빈 상태를 표시한다", async () => {
+    renderApproval();
+    expect(await screen.findByText("표시할 결재 문서가 없습니다.")).toBeInTheDocument();
+    expect(screen.queryByText("커튼월 업체 선정 품의")).not.toBeInTheDocument();
   });
 
-  it("결재 요청을 작성하고 즉시 상신한다", async () => {
-    render(<ApprovalWorkspace />);
-    await screen.findByText(/로컬 데모 모드/);
-    fireEvent.click(screen.getByRole("button", { name: "+ 결재 작성" }));
-    fireEvent.change(screen.getByLabelText("결재 제목"), {
-      target: { value: "설계 변경 계약 체결 품의" },
-    });
-    fireEvent.change(screen.getByLabelText("결재 내용"), {
-      target: { value: "설계 변경 계약의 체결 승인을 요청합니다." },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "저장 후 상신" }));
+  it("결재선 템플릿을 결재 문서와 분리해 생성한다", async () => {
+    renderApproval();
+    await screen.findByText("표시할 결재 문서가 없습니다.");
+    fireEvent.click(screen.getByRole("button", { name: /결재선 템플릿/ }));
+    fireEvent.click(screen.getByRole("button", { name: "새 결재선 만들기" }));
+    expect(screen.getByRole("option", { name: "박민수" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "김승인" })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("템플릿 이름"), { target: { value: "기본 공사비 결재선" } });
+    fireEvent.change(screen.getByLabelText("결재자 선택"), { target: { value: "20000000-0000-4000-8000-000000000002" } });
+    fireEvent.click(screen.getByRole("button", { name: "+ 결재 단계 추가" }));
+    fireEvent.change(screen.getByLabelText("결재자 선택"), { target: { value: "20000000-0000-4000-8000-000000000003" } });
+    fireEvent.click(screen.getByRole("button", { name: "+ 결재 단계 추가" }));
+    expect(screen.getByLabelText("1차 결재 담당자")).toHaveValue("20000000-0000-4000-8000-000000000002");
+    expect(screen.getByLabelText("2차 결재 담당자")).toHaveValue("20000000-0000-4000-8000-000000000003");
+    fireEvent.click(screen.getByRole("button", { name: "김승인 결재 순서를 앞으로 이동" }));
+    expect(screen.getByLabelText("1차 결재 담당자")).toHaveValue("20000000-0000-4000-8000-000000000003");
+    fireEvent.click(screen.getByRole("button", { name: "템플릿 저장" }));
     await waitFor(() =>
-      expect(screen.getByText("문서를 상신했습니다.")).toBeInTheDocument(),
+      expect(screen.getByText("결재선 템플릿을 만들었습니다.")).toBeInTheDocument(),
     );
-    expect(
-      screen.getAllByText("설계 변경 계약 체결 품의").length,
-    ).toBeGreaterThan(0);
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith(expect.stringContaining("/approvals/route-templates"), expect.objectContaining({ method: "POST" }));
+  });
+
+  it("로컬 승인 계정을 결재자 목록에 표시하고 템플릿을 저장한다", async () => {
+    window.localStorage.setItem("project-hub-local-accounts", JSON.stringify([
+      {
+        id: "local-approved-test1",
+        username: "test1",
+        email: "test1@example.com",
+        name: "김지훈test1",
+        passwordHash: "hash",
+        approvalStatus: "APPROVED",
+        platformRole: "USER",
+        createdAt: "2026-11-20T00:00:00.000Z",
+        approvedAt: "2026-11-20T01:00:00.000Z",
+        approvedById: "local-admin",
+      },
+    ]));
+    window.sessionStorage.setItem("project-hub-access-token", "local:local-admin");
+    window.sessionStorage.setItem("project-hub-session-user", JSON.stringify({
+      id: "local-admin",
+      username: "dawooadmin",
+      email: "admin@projecthub.local",
+      name: "다우그룹 관리자",
+      platformRole: "PLATFORM_ADMIN",
+    }));
+
+    render(
+      <AuthProvider>
+        <ProjectProvider>
+          <ApprovalWorkspace />
+        </ProjectProvider>
+      </AuthProvider>,
+    );
+
+    await screen.findByText("표시할 결재 문서가 없습니다.");
+    fireEvent.click(screen.getByRole("button", { name: /결재선 템플릿/ }));
+    fireEvent.click(screen.getByRole("button", { name: "새 결재선 만들기" }));
+    expect(screen.getByRole("option", { name: "김지훈test1" })).toBeInTheDocument();
+    expect(screen.queryByText("승인 회원")).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("템플릿 이름"), { target: { value: "로컬 승인 결재선" } });
+    fireEvent.change(screen.getByLabelText("결재자 선택"), { target: { value: "local-approved-test1" } });
+    fireEvent.click(screen.getByRole("button", { name: "+ 결재 단계 추가" }));
+    fireEvent.click(screen.getByRole("button", { name: "템플릿 저장" }));
+
+    expect(await screen.findByText("결재선 템플릿을 만들었습니다.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "로컬 승인 결재선" })).toBeInTheDocument();
+    expect(window.localStorage.getItem("project-hub-local-approval-templates:30000000-0000-4000-8000-000000000001")).toContain("김지훈test1");
   });
 });

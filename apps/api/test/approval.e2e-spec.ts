@@ -11,8 +11,8 @@ class TestAuthGuard implements CanActivate { canActivate(context: ExecutionConte
 
 describe("기본 전자결재 API 입력 계약 (e2e)", () => {
   let app: INestApplication;
-  const create = jest.fn().mockResolvedValue({ id: "approval-1" }); const reject = jest.fn().mockResolvedValue({ id: "approval-1", status: "REJECTED" });
-  beforeAll(async () => { const module = await Test.createTestingModule({ controllers: [ApprovalController], providers: [{ provide: ApprovalService, useValue: { create, reject } }] }).overrideGuard(ApiAuthGuard).useClass(TestAuthGuard).compile(); app = module.createNestApplication(); app.setGlobalPrefix("api/v1"); app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true })); await app.init(); });
+  const create = jest.fn().mockResolvedValue({ id: "approval-1" }); const reject = jest.fn().mockResolvedValue({ id: "approval-1", status: "REJECTED" }); const createRouteTemplate = jest.fn().mockResolvedValue({ id: "template-1" });
+  beforeAll(async () => { const module = await Test.createTestingModule({ controllers: [ApprovalController], providers: [{ provide: ApprovalService, useValue: { create, reject, createRouteTemplate } }] }).overrideGuard(ApiAuthGuard).useClass(TestAuthGuard).compile(); app = module.createNestApplication(); app.setGlobalPrefix("api/v1"); app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true })); await app.init(); });
   afterAll(async () => app.close());
 
   it("문서 버전과 순차 결재선을 지정해 기안한다", async () => {
@@ -24,5 +24,10 @@ describe("기본 전자결재 API 입력 계약 (e2e)", () => {
     await request(app.getHttpServer()).post(`/api/v1/projects/${PROJECT_ID}/approvals/70000000-0000-4000-8000-000000000001/reject`).send({ comment: "" }).expect(400);
     await request(app.getHttpServer()).post(`/api/v1/projects/${PROJECT_ID}/approvals`).send({ title: "권한 위조", content: "본문", role: "PLATFORM_ADMIN" }).expect(400);
     expect(reject).not.toHaveBeenCalled();
+  });
+
+  it("결재자 순서가 포함된 결재선 템플릿을 생성한다", async () => {
+    await request(app.getHttpServer()).post(`/api/v1/projects/${PROJECT_ID}/approvals/route-templates`).send({ name: "기본 공사비 결재선", description: "현장 검토 후 PM 승인", approverIds: ["20000000-0000-4000-8000-000000000001"] }).expect(201);
+    expect(createRouteTemplate).toHaveBeenCalledWith(expect.anything(), PROJECT_ID, expect.objectContaining({ name: "기본 공사비 결재선" }));
   });
 });

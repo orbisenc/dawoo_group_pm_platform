@@ -19,6 +19,7 @@ const USER_ADMIN = "30000000-0000-4000-8000-000000000001";
 const USER_GROUP_ADMIN = "30000000-0000-4000-8000-000000000002";
 const USER_READ_ONLY = "30000000-0000-4000-8000-000000000003";
 const USER_PARTNER = "30000000-0000-4000-8000-000000000004";
+const USER_PLATFORM_ADMIN = "30000000-0000-4000-8000-000000000005";
 const MEMBER_ADMIN = "40000000-0000-4000-8000-000000000001";
 const MEMBER_GROUP_ADMIN = "40000000-0000-4000-8000-000000000002";
 const MEMBER_READ_ONLY = "40000000-0000-4000-8000-000000000003";
@@ -40,11 +41,12 @@ class MemoryCollaborationRepository extends CollaborationRepository {
     { id: GROUP_B, projectId: PROJECT_B, name: "B 비공개 그룹", description: null, isPrivate: true, createdById: USER_ADMIN, memberships: [] },
   ];
 
-  findActor(userId: string) { return Promise.resolve([USER_ADMIN, USER_GROUP_ADMIN, USER_READ_ONLY, USER_PARTNER].includes(userId) ? { id: userId, isActive: true, platformRole: "USER" as const } : null); }
+  findActor(userId: string) { if (userId === USER_PLATFORM_ADMIN) return Promise.resolve({ id: userId, isActive: true, platformRole: "PLATFORM_ADMIN" as const }); return Promise.resolve([USER_ADMIN, USER_GROUP_ADMIN, USER_READ_ONLY, USER_PARTNER].includes(userId) ? { id: userId, isActive: true, platformRole: "USER" as const } : null); }
   findOrganizationRole(userId: string, organizationId: string) { return Promise.resolve(userId === USER_PARTNER && organizationId === ORG_B ? "ORG_MEMBER" as const : null); }
   findProject(projectId: string) { return Promise.resolve(this.projects.find((item) => item.id === projectId) ?? null); }
   createProjectWithAdmin(data: CreateProjectData, adminUserId: string) { void adminUserId; return Promise.resolve({ id: crypto.randomUUID(), description: null, status: "PREPARING" as const, ...data }); }
   updateProject(projectId: string, data: UpdateProjectData) { const project = this.projects.find((item) => item.id === projectId)!; Object.assign(project, data); return Promise.resolve(project); }
+  archiveProject(projectId: string) { const project = this.projects.find((item) => item.id === projectId)!; project.status = "ARCHIVED"; return Promise.resolve(project); }
   findMembership(projectId: string, userId: string) { return Promise.resolve(this.members.find((item) => item.projectId === projectId && item.userId === userId) ?? null); }
   findMemberById(projectId: string, memberId: string) { return Promise.resolve(this.members.find((item) => item.projectId === projectId && item.id === memberId) ?? null); }
   listMembers(projectId: string) { return Promise.resolve(this.members.filter((item) => item.projectId === projectId)); }
@@ -128,5 +130,14 @@ describe("프로젝트 협업 권한 API (e2e)", () => {
 
   it("다른 프로젝트 멤버 ID를 협업 그룹에 추가하지 못한다", async () => {
     await request(app.getHttpServer()).post(`/api/v1/projects/${PROJECT_A}/groups/${GROUP_A}/members`).set("authorization", `Bearer ${tokens.sign(USER_ADMIN)}`).send({ projectMembershipId: "40000000-0000-4000-8000-000000000099", role: "MEMBER" }).expect(404);
+  });
+
+  it("일반 프로젝트 관리자는 프로젝트를 삭제하지 못한다", async () => {
+    await request(app.getHttpServer()).delete(`/api/v1/projects/${PROJECT_A}`).set("authorization", `Bearer ${tokens.sign(USER_ADMIN)}`).expect(403);
+  });
+
+  it("플랫폼 관리자는 프로젝트를 삭제 상태로 전환한다", async () => {
+    const response = await request(app.getHttpServer()).delete(`/api/v1/projects/${PROJECT_A}`).set("authorization", `Bearer ${tokens.sign(USER_PLATFORM_ADMIN)}`).expect(200);
+    expect(response.body.status).toBe("ARCHIVED");
   });
 });

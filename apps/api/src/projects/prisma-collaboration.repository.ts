@@ -32,6 +32,7 @@ export class PrismaCollaborationRepository extends CollaborationRepository {
     });
   }
   updateProject(projectId: string, data: UpdateProjectData) { return this.prisma.project.update({ where: { id: projectId }, data, select: { id: true, organizationId: true, code: true, name: true, description: true, status: true } }); }
+  archiveProject(projectId: string) { return this.prisma.project.update({ where: { id: projectId }, data: { status: "ARCHIVED" }, select: { id: true, organizationId: true, code: true, name: true, description: true, status: true } }); }
   findMembership(projectId: string, userId: string) { return this.prisma.projectMembership.findUnique({ where: { projectId_userId: { projectId, userId } }, select: { id: true, projectId: true, userId: true, organizationId: true, role: true, status: true } }); }
   findMemberById(projectId: string, memberId: string) { return this.prisma.projectMembership.findFirst({ where: { id: memberId, projectId }, select: { id: true, projectId: true, userId: true, organizationId: true, role: true, status: true } }); }
   listMembers(projectId: string) { return this.prisma.projectMembership.findMany({ where: { projectId, status: "ACTIVE" }, select: { id: true, projectId: true, userId: true, organizationId: true, role: true, status: true }, orderBy: { createdAt: "asc" } }); }

@@ -10,6 +10,7 @@ import {
 } from "@prisma/client";
 
 const prisma = new PrismaClient();
+const adminPasswordHash = "scrypt$dawoo-admin-2026$885d65964e7b11262f6688bec4c108229114254e0b47f36c4476a4a61e530db39bd0dcb5b3d0fa4543cda4aba72ca0a21bbbafa18fffa897439c6c1fa6b2fd12";
 
 async function main() {
   const organization = await prisma.organization.upsert({
@@ -29,12 +30,23 @@ async function main() {
 
   const clientAdmin = await prisma.user.upsert({
     where: { email: "admin@projecthub.local" },
-    update: {},
+    update: {
+      username: "dawooadmin",
+      passwordHash: adminPasswordHash,
+      isActive: true,
+      approvalStatus: "APPROVED",
+      platformRole: "PLATFORM_ADMIN",
+      approvedAt: new Date(),
+    },
     create: {
       id: "20000000-0000-4000-8000-000000000001",
+      username: "dawooadmin",
       email: "admin@projecthub.local",
-      name: "김지훈",
-      passwordHash: "LOCAL_LOGIN_NOT_ENABLED",
+      name: "다우그룹 관리자",
+      passwordHash: adminPasswordHash,
+      approvalStatus: "APPROVED",
+      platformRole: "PLATFORM_ADMIN",
+      approvedAt: new Date(),
     },
   });
   const contractor = await prisma.user.upsert({
@@ -42,6 +54,7 @@ async function main() {
     update: {},
     create: {
       id: "20000000-0000-4000-8000-000000000002",
+      username: "partner",
       email: "partner@projecthub.local",
       name: "박민수",
       passwordHash: "LOCAL_LOGIN_NOT_ENABLED",

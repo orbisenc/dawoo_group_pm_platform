@@ -11,7 +11,6 @@ export type DawooProject = {
   category: string;
   organization: string;
   location: string;
-  status: "기획" | "개발 검토";
   workspaceReadiness: number;
   image: string;
   description: string;
@@ -28,7 +27,6 @@ export const dawooProjects: DawooProject[] = [
     category: "도시개발",
     organization: "(주)다우그룹",
     location: "경기 의왕시 학의동 · 백운밸리 2지구",
-    status: "기획",
     workspaceReadiness: 72,
     image: "/images/project-uiwang.png",
     description:
@@ -48,7 +46,6 @@ export const dawooProjects: DawooProject[] = [
     category: "복합리조트",
     organization: "(주)다우개발 · (주)다우그룹",
     location: "인천 중구 을왕동 산 70 일원",
-    status: "개발 검토",
     workspaceReadiness: 58,
     image: "/images/project-eulwangri.png",
     description:
@@ -69,7 +66,6 @@ export const dawooProjects: DawooProject[] = [
     category: "도심 복합개발",
     organization: "(주)다우그룹",
     location: "서울 종로구 장사동 67 일대",
-    status: "개발 검토",
     workspaceReadiness: 46,
     image: "/images/project-sewoon.png",
     description:

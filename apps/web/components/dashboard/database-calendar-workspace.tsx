@@ -251,7 +251,7 @@ export function DatabaseCalendarWorkspace() {
         const response = await fetch("/backend/auth/dev-session", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ email: "admin@projecthub.local" }),
+          body: JSON.stringify({ email: "partner@projecthub.local" }),
         });
         if (!response.ok) throw new Error();
         const session = (await response.json()) as { accessToken: string };

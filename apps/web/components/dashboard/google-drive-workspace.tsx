@@ -1,12 +1,15 @@
 "use client";
+/* eslint-disable @next/next/no-img-element -- Google Drive 미리보기는 인증된 임시 object URL을 사용한다. */
 
 import Script from "next/script";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, DragEvent, FormEvent } from "react";
 
-const GOOGLE_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+const GOOGLE_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive";
 const GOOGLE_FOLDER_MIME = "application/vnd.google-apps.folder";
-const ROOT_FOLDER_NAME = "DAWOO GROUP PROJECT HUB";
+const GOOGLE_SHORTCUT_MIME = "application/vnd.google-apps.shortcut";
+const GOOGLE_MIME_PREFIX = "application/vnd.google-apps.";
+const GOOGLE_CONSENT_KEY = "project-hub-google-drive-consent";
 
 type GoogleTokenResponse = {
   access_token?: string;
@@ -33,20 +36,89 @@ declare global {
   }
 }
 
-type GoogleDriveFile = {
+export type GoogleDriveFile = {
   id: string;
   name: string;
   mimeType: string;
   size?: string;
   modifiedTime?: string;
   webViewLink?: string;
+  webContentLink?: string;
+  parents?: string[];
   owners?: Array<{ displayName?: string }>;
+  shortcutDetails?: { targetId?: string; targetMimeType?: string };
+  capabilities?: {
+    canDownload?: boolean;
+    canEdit?: boolean;
+    canRename?: boolean;
+    canTrash?: boolean;
+    canMoveItemWithinDrive?: boolean;
+  };
 };
 type DriveListResponse = { files?: GoogleDriveFile[] };
-type DriveAboutResponse = { storageQuota?: { limit?: string; usage?: string } };
+type SharedDrive = { id: string; name: string; capabilities?: { canAddChildren?: boolean } };
+type SharedDriveListResponse = { drives?: SharedDrive[]; nextPageToken?: string };
+type DriveAboutResponse = {
+  storageQuota?: { limit?: string; usage?: string };
+  user?: { displayName?: string; emailAddress?: string };
+};
+type DriveCategory = "personal" | "shared";
+type DrivePreview = { name: string; url: string; kind: "image" | "video" | "audio" | "document"; mimeType: string };
+
+const personalRoot: GoogleDriveFile = {
+  id: "root",
+  name: "내 드라이브",
+  mimeType: GOOGLE_FOLDER_MIME,
+  webViewLink: "https://drive.google.com/drive/my-drive",
+};
 
 function escapeDriveQuery(value: string) {
   return value.replaceAll("\\", "\\\\").replaceAll("'", "\\'");
+}
+
+export function buildGoogleDriveListUrl(folderId: string, search: string, sharedDriveId?: string) {
+  const conditions = [`'${escapeDriveQuery(folderId)}' in parents`, "trashed = false"];
+  if (search.trim()) conditions.push(`name contains '${escapeDriveQuery(search.trim())}'`);
+  const params = new URLSearchParams({
+    q: conditions.join(" and "),
+    spaces: "drive",
+    orderBy: "folder,name_natural",
+    pageSize: "200",
+    supportsAllDrives: "true",
+    includeItemsFromAllDrives: "true",
+    fields: "files(id,name,mimeType,size,modifiedTime,webViewLink,webContentLink,parents,owners(displayName),shortcutDetails(targetId,targetMimeType),capabilities(canDownload,canEdit,canRename,canTrash,canMoveItemWithinDrive))",
+    corpora: sharedDriveId ? "drive" : "user",
+  });
+  if (sharedDriveId) params.set("driveId", sharedDriveId);
+  return `https://www.googleapis.com/drive/v3/files?${params}`;
+}
+
+export function resolveDriveItem(item: GoogleDriveFile) {
+  const shortcut = item.mimeType === GOOGLE_SHORTCUT_MIME;
+  return {
+    id: shortcut ? item.shortcutDetails?.targetId ?? item.id : item.id,
+    mimeType: shortcut ? item.shortcutDetails?.targetMimeType ?? item.mimeType : item.mimeType,
+    shortcut,
+  };
+}
+
+export function isDriveFolder(item: GoogleDriveFile) {
+  return resolveDriveItem(item).mimeType === GOOGLE_FOLDER_MIME;
+}
+
+function buildFolderChoicesUrl(sharedDriveId?: string) {
+  const params = new URLSearchParams({
+    q: `mimeType = '${GOOGLE_FOLDER_MIME}' and trashed = false`,
+    spaces: "drive",
+    orderBy: "name_natural",
+    pageSize: "1000",
+    supportsAllDrives: "true",
+    includeItemsFromAllDrives: "true",
+    fields: "files(id,name,mimeType,parents)",
+    corpora: sharedDriveId ? "drive" : "user",
+  });
+  if (sharedDriveId) params.set("driveId", sharedDriveId);
+  return `https://www.googleapis.com/drive/v3/files?${params}`;
 }
 
 function sizeText(value?: string) {
@@ -67,16 +139,99 @@ function dateText(value?: string) {
   }).format(new Date(value));
 }
 
-function fileType(file: GoogleDriveFile) {
-  if (file.mimeType === GOOGLE_FOLDER_MIME) return "폴더";
-  return file.name.split(".").pop()?.toUpperCase().slice(0, 4) || "FILE";
+type DriveItemIconKind =
+  | "folder"
+  | "pdf"
+  | "document"
+  | "spreadsheet"
+  | "presentation"
+  | "image"
+  | "video"
+  | "audio"
+  | "archive"
+  | "cad"
+  | "shortcut"
+  | "file";
+
+function driveItemIconKind(file: GoogleDriveFile): DriveItemIconKind {
+  if (isDriveFolder(file)) return "folder";
+  const mimeType = resolveDriveItem(file).mimeType;
+  const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+
+  if (file.mimeType === GOOGLE_SHORTCUT_MIME) return "shortcut";
+  if (mimeType === "application/pdf" || extension === "pdf") return "pdf";
+  if (mimeType.startsWith("image/")) return "image";
+  if (mimeType.startsWith("video/")) return "video";
+  if (mimeType.startsWith("audio/")) return "audio";
+  if (mimeType === "application/vnd.google-apps.spreadsheet" || ["xls", "xlsx", "csv", "ods"].includes(extension)) return "spreadsheet";
+  if (mimeType === "application/vnd.google-apps.presentation" || ["ppt", "pptx", "odp"].includes(extension)) return "presentation";
+  if (mimeType === "application/vnd.google-apps.document" || ["doc", "docx", "odt", "rtf", "txt"].includes(extension)) return "document";
+  if (["zip", "rar", "7z", "tar", "gz"].includes(extension)) return "archive";
+  if (["dwg", "dxf", "ifc", "rvt", "skp"].includes(extension)) return "cad";
+  return "file";
 }
 
-async function googleApi<T>(
+function DriveItemIcon({ file }: { file: GoogleDriveFile }) {
+  const kind = driveItemIconKind(file);
+  const icon = (() => {
+    switch (kind) {
+      case "folder":
+        return <path d="M3.25 7.25h6l1.9 2h9.6v8.5a2 2 0 0 1-2 2H5.25a2 2 0 0 1-2-2V7.25Zm0 0v-1a2 2 0 0 1 2-2h4l1.8 2h7.7a2 2 0 0 1 2 2v1" />;
+      case "image":
+        return <><rect x="3.5" y="4" width="17" height="16" rx="2.5" /><circle cx="9" cy="9" r="1.5" /><path d="m5.5 17 4.2-4.2 3 3 2.2-2.2 3.6 3.4" /></>;
+      case "video":
+        return <><rect x="3.5" y="5" width="17" height="14" rx="2.5" /><path d="m10 9 5 3-5 3V9Z" /></>;
+      case "audio":
+        return <><path d="M10 18V6.5L18 5v11" /><circle cx="7.5" cy="18" r="2.5" /><circle cx="15.5" cy="16" r="2.5" /></>;
+      case "spreadsheet":
+        return <><path d="M6 3.5h8l4 4v13H6v-17Z" /><path d="M14 3.5v4h4M8.5 11h7M8.5 14h7M8.5 17h7M11 9.5v9M14 9.5v9" /></>;
+      case "presentation":
+        return <><path d="M5 4h14v12H5V4Z" /><path d="M9 20h6M12 16v4M9 12V8h6v4H9Z" /></>;
+      case "archive":
+        return <><path d="M6 3.5h8l4 4v13H6v-17Z" /><path d="M14 3.5v4h4M10 4h3M10 7h3M10 10h3M10 13h3M10 16h3" /></>;
+      case "cad":
+        return <><path d="m12 3.5 8 4.5v8L12 20.5 4 16V8l8-4.5Z" /><path d="m4 8 8 4.5L20 8M12 12.5v8" /></>;
+      case "shortcut":
+        return <><path d="M9.5 14.5 14.5 9" /><path d="M8 17H6.5a3.5 3.5 0 0 1 0-7H10M14 7h3.5a3.5 3.5 0 0 1 0 7H14" /></>;
+      case "pdf":
+      case "document":
+      case "file":
+      default:
+        return <><path d="M6 3.5h8l4 4v13H6v-17Z" /><path d="M14 3.5v4h4M9 12h6M9 15h6M9 18h4" /></>;
+    }
+  })();
+
+  return (
+    <span className={`file-type drive-item-icon ${kind}`} aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        {icon}
+      </svg>
+    </span>
+  );
+}
+
+function exportFormat(mimeType: string) {
+  if (mimeType === "application/vnd.google-apps.document") return { mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", extension: "docx" };
+  if (mimeType === "application/vnd.google-apps.spreadsheet") return { mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", extension: "xlsx" };
+  if (mimeType === "application/vnd.google-apps.presentation") return { mimeType: "application/vnd.openxmlformats-officedocument.presentationml.presentation", extension: "pptx" };
+  if (mimeType === "application/vnd.google-apps.drawing") return { mimeType: "application/pdf", extension: "pdf" };
+  return null;
+}
+
+function previewKind(mimeType: string): DrivePreview["kind"] | null {
+  if (mimeType.startsWith("image/")) return "image";
+  if (mimeType.startsWith("video/")) return "video";
+  if (mimeType.startsWith("audio/")) return "audio";
+  if (mimeType === "application/pdf" || mimeType.startsWith("text/")) return "document";
+  if (exportFormat(mimeType)) return "document";
+  return null;
+}
+
+async function googleResponse(
   accessToken: string,
   url: string,
   options?: RequestInit,
-): Promise<T> {
+): Promise<Response> {
   const response = await fetch(url, {
     ...options,
     headers: { authorization: `Bearer ${accessToken}`, ...options?.headers },
@@ -91,6 +246,15 @@ async function googleApi<T>(
         : (body?.error?.message ?? "Google Drive 요청을 처리하지 못했습니다."),
     );
   }
+  return response;
+}
+
+async function googleApi<T>(
+  accessToken: string,
+  url: string,
+  options?: RequestInit,
+): Promise<T> {
+  const response = await googleResponse(accessToken, url, options);
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
 }
@@ -181,9 +345,12 @@ export function GoogleDriveDropzone({
 export function GoogleDriveWorkspace() {
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim() ?? "";
   const tokenClient = useRef<GoogleTokenClient | null>(null);
+  const attemptedReconnect = useRef(false);
   const [scriptReady, setScriptReady] = useState(false);
   const [accessToken, setAccessToken] = useState("");
-  const [rootFolder, setRootFolder] = useState<GoogleDriveFile | null>(null);
+  const [category, setCategory] = useState<DriveCategory>("personal");
+  const [sharedDrives, setSharedDrives] = useState<SharedDrive[]>([]);
+  const [selectedSharedDriveId, setSelectedSharedDriveId] = useState("");
   const [path, setPath] = useState<GoogleDriveFile[]>([]);
   const [items, setItems] = useState<GoogleDriveFile[]>([]);
   const [query, setQuery] = useState("");
@@ -194,76 +361,65 @@ export function GoogleDriveWorkspace() {
   const [notice, setNotice] = useState("");
   const [uploadStatus, setUploadStatus] = useState("");
   const [quota, setQuota] = useState<DriveAboutResponse["storageQuota"]>();
+  const [googleUser, setGoogleUser] = useState<DriveAboutResponse["user"]>();
+  const [preview, setPreview] = useState<DrivePreview | null>(null);
+  const [moveItem, setMoveItem] = useState<GoogleDriveFile | null>(null);
+  const [moveTargets, setMoveTargets] = useState<GoogleDriveFile[]>([]);
+  const [moveTargetId, setMoveTargetId] = useState("");
+  const selectedSharedDrive = sharedDrives.find((drive) => drive.id === selectedSharedDriveId) ?? null;
+  const rootFolder = useMemo<GoogleDriveFile | null>(() => category === "personal" ? personalRoot : selectedSharedDrive ? {
+    id: selectedSharedDrive.id,
+    name: selectedSharedDrive.name,
+    mimeType: GOOGLE_FOLDER_MIME,
+    webViewLink: `https://drive.google.com/drive/folders/${selectedSharedDrive.id}`,
+  } : null, [category, selectedSharedDrive]);
   const currentFolder = path.at(-1) ?? rootFolder;
 
+  const closePreview = useCallback(() => {
+    setPreview((current) => {
+      if (current) URL.revokeObjectURL(current.url);
+      return null;
+    });
+  }, []);
+
+  useEffect(() => () => {
+    if (preview) URL.revokeObjectURL(preview.url);
+  }, [preview]);
+
   const loadItems = useCallback(
-    async (token: string, folderId: string, search: string) => {
-      const conditions = [
-        `'${escapeDriveQuery(folderId)}' in parents`,
-        "trashed = false",
-      ];
-      if (search.trim())
-        conditions.push(`name contains '${escapeDriveQuery(search.trim())}'`);
-      const params = new URLSearchParams({
-        q: conditions.join(" and "),
-        spaces: "drive",
-        orderBy: "folder,name_natural",
-        pageSize: "200",
-        fields:
-          "files(id,name,mimeType,size,modifiedTime,webViewLink,owners(displayName))",
-      });
+    async (token: string, folderId: string, search: string, sharedDriveId?: string) => {
       const result = await googleApi<DriveListResponse>(
         token,
-        `https://www.googleapis.com/drive/v3/files?${params}`,
+        buildGoogleDriveListUrl(folderId, search, sharedDriveId),
       );
       setItems(result.files ?? []);
     },
     [],
   );
 
-  const ensureRootFolder = useCallback(async (token: string) => {
-    const params = new URLSearchParams({
-      q: `trashed = false and mimeType = '${GOOGLE_FOLDER_MIME}' and appProperties has { key='projectHubRoot' and value='true' }`,
-      spaces: "drive",
-      pageSize: "1",
-      fields: "files(id,name,mimeType,modifiedTime,webViewLink)",
-    });
-    const existing = await googleApi<DriveListResponse>(
-      token,
-      `https://www.googleapis.com/drive/v3/files?${params}`,
-    );
-    if (existing.files?.[0]) return existing.files[0];
-    return googleApi<GoogleDriveFile>(
-      token,
-      "https://www.googleapis.com/drive/v3/files",
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          name: ROOT_FOLDER_NAME,
-          mimeType: GOOGLE_FOLDER_MIME,
-          appProperties: { projectHubRoot: "true" },
-        }),
-      },
-    );
-  }, []);
-
   const initializeDrive = useCallback(
     async (token: string) => {
       setBusy(true);
       setError("");
       try {
-        const [root, about] = await Promise.all([
-          ensureRootFolder(token),
+        const [driveList, about] = await Promise.all([
+          googleApi<SharedDriveListResponse>(
+            token,
+            "https://www.googleapis.com/drive/v3/drives?pageSize=100&fields=drives(id,name,capabilities(canAddChildren)),nextPageToken",
+          ),
           googleApi<DriveAboutResponse>(
             token,
-            "https://www.googleapis.com/drive/v3/about?fields=storageQuota(limit,usage)",
+            "https://www.googleapis.com/drive/v3/about?fields=storageQuota(limit,usage),user(displayName,emailAddress)",
           ),
         ]);
-        setRootFolder(root);
+        setCategory("personal");
+        setSharedDrives(driveList.drives ?? []);
+        setSelectedSharedDriveId(driveList.drives?.[0]?.id ?? "");
         setPath([]);
         setQuota(about.storageQuota);
-        await loadItems(token, root.id, "");
+        setGoogleUser(about.user);
+        await loadItems(token, personalRoot.id, "");
+        window.localStorage.setItem(GOOGLE_CONSENT_KEY, "true");
         setNotice("Google Drive와 연결되었습니다.");
       } catch (reason) {
         setAccessToken("");
@@ -276,7 +432,7 @@ export function GoogleDriveWorkspace() {
         setBusy(false);
       }
     },
-    [ensureRootFolder, loadItems],
+    [loadItems],
   );
 
   useEffect(() => {
@@ -300,12 +456,16 @@ export function GoogleDriveWorkspace() {
           oauthError.message ?? "Google 계정 연결 창을 열지 못했습니다.",
         ),
     });
+    if (!attemptedReconnect.current && window.localStorage.getItem(GOOGLE_CONSENT_KEY) === "true") {
+      attemptedReconnect.current = true;
+      tokenClient.current.requestAccessToken({ prompt: "" });
+    }
   }, [clientId, initializeDrive, scriptReady]);
 
   useEffect(() => {
     if (!accessToken || !currentFolder) return;
     const timer = window.setTimeout(() => {
-      void loadItems(accessToken, currentFolder.id, query).catch(
+      void loadItems(accessToken, currentFolder.id, query, category === "shared" ? selectedSharedDriveId : undefined).catch(
         (reason: unknown) => {
           setError(
             reason instanceof Error
@@ -316,7 +476,7 @@ export function GoogleDriveWorkspace() {
       );
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [accessToken, currentFolder, loadItems, query]);
+  }, [accessToken, category, currentFolder, loadItems, query, selectedSharedDriveId]);
 
   const connect = () => {
     setError("");
@@ -330,24 +490,30 @@ export function GoogleDriveWorkspace() {
       );
       return;
     }
-    tokenClient.current.requestAccessToken({ prompt: "consent" });
+    tokenClient.current.requestAccessToken({ prompt: "" });
   };
 
   const disconnect = () => {
     if (accessToken && window.google?.accounts)
       window.google.accounts.oauth2.revoke(accessToken);
     setAccessToken("");
-    setRootFolder(null);
+    window.localStorage.removeItem(GOOGLE_CONSENT_KEY);
+    setCategory("personal");
+    setSharedDrives([]);
+    setSelectedSharedDriveId("");
     setPath([]);
     setItems([]);
     setQuota(undefined);
+    setGoogleUser(undefined);
   };
 
   const openFolder = async (folder: GoogleDriveFile) => {
     if (!accessToken) return;
-    setPath((current) => [...current, folder]);
+    const target = resolveDriveItem(folder);
+    const resolvedFolder = { ...folder, id: target.id, mimeType: target.mimeType };
+    setPath((current) => [...current, resolvedFolder]);
     setQuery("");
-    await loadItems(accessToken, folder.id, "");
+    await loadItems(accessToken, target.id, "", category === "shared" ? selectedSharedDriveId : undefined);
   };
 
   const goPath = async (index: number) => {
@@ -356,7 +522,25 @@ export function GoogleDriveWorkspace() {
     const target = nextPath.at(-1) ?? rootFolder;
     setPath(nextPath);
     setQuery("");
-    await loadItems(accessToken, target.id, "");
+    await loadItems(accessToken, target.id, "", category === "shared" ? selectedSharedDriveId : undefined);
+  };
+
+  const selectCategory = async (nextCategory: DriveCategory, driveId?: string) => {
+    if (!accessToken) return;
+    setCategory(nextCategory);
+    setPath([]);
+    setQuery("");
+    if (nextCategory === "personal") {
+      await loadItems(accessToken, personalRoot.id, "");
+      return;
+    }
+    const nextDriveId = driveId ?? selectedSharedDriveId ?? sharedDrives[0]?.id;
+    if (!nextDriveId) {
+      setItems([]);
+      return;
+    }
+    setSelectedSharedDriveId(nextDriveId);
+    await loadItems(accessToken, nextDriveId, "", nextDriveId);
   };
 
   const createFolder = async (event: FormEvent) => {
@@ -367,7 +551,7 @@ export function GoogleDriveWorkspace() {
     try {
       await googleApi<GoogleDriveFile>(
         accessToken,
-        "https://www.googleapis.com/drive/v3/files",
+        "https://www.googleapis.com/drive/v3/files?supportsAllDrives=true",
         {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -381,7 +565,7 @@ export function GoogleDriveWorkspace() {
       setFolderName("");
       setFolderForm(false);
       setNotice("Google Drive에 새 폴더를 만들었습니다.");
-      await loadItems(accessToken, currentFolder.id, query);
+      await loadItems(accessToken, currentFolder.id, query, category === "shared" ? selectedSharedDriveId : undefined);
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : "폴더를 만들지 못했습니다.",
@@ -404,7 +588,7 @@ export function GoogleDriveWorkspace() {
       setUploadStatus(`${index + 1}/${files.length} · ${file.name} 업로드 중`);
       try {
         const sessionResponse = await fetch(
-          "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable",
+          "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true",
           {
             method: "POST",
             headers: {
@@ -435,7 +619,7 @@ export function GoogleDriveWorkspace() {
     }
 
     try {
-      await loadItems(accessToken, targetFolderId, query);
+      await loadItems(accessToken, targetFolderId, query, category === "shared" ? selectedSharedDriveId : undefined);
       if (uploadedCount > 0)
         setNotice(
           `${uploadedCount}개 파일을 현재 Google Drive 폴더에 업로드했습니다.`,
@@ -463,7 +647,7 @@ export function GoogleDriveWorkspace() {
     try {
       await googleApi<GoogleDriveFile>(
         accessToken,
-        `https://www.googleapis.com/drive/v3/files/${item.id}`,
+        `https://www.googleapis.com/drive/v3/files/${item.id}?supportsAllDrives=true`,
         {
           method: "PATCH",
           headers: { "content-type": "application/json" },
@@ -471,7 +655,7 @@ export function GoogleDriveWorkspace() {
         },
       );
       setNotice("Google Drive 항목의 이름을 변경했습니다.");
-      await loadItems(accessToken, currentFolder.id, query);
+      await loadItems(accessToken, currentFolder.id, query, category === "shared" ? selectedSharedDriveId : undefined);
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -492,7 +676,7 @@ export function GoogleDriveWorkspace() {
     try {
       await googleApi<GoogleDriveFile>(
         accessToken,
-        `https://www.googleapis.com/drive/v3/files/${item.id}`,
+        `https://www.googleapis.com/drive/v3/files/${item.id}?supportsAllDrives=true`,
         {
           method: "PATCH",
           headers: { "content-type": "application/json" },
@@ -500,7 +684,7 @@ export function GoogleDriveWorkspace() {
         },
       );
       setNotice("Google Drive 휴지통으로 이동했습니다.");
-      await loadItems(accessToken, currentFolder.id, query);
+      await loadItems(accessToken, currentFolder.id, query, category === "shared" ? selectedSharedDriveId : undefined);
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -518,8 +702,119 @@ export function GoogleDriveWorkspace() {
     );
   };
 
+  const refreshCurrentFolder = async () => {
+    if (!accessToken || !currentFolder) return;
+    setBusy(true);
+    setError("");
+    try {
+      await loadItems(accessToken, currentFolder.id, query, category === "shared" ? selectedSharedDriveId : undefined);
+      setNotice("Google Drive의 최신 내용을 불러왔습니다.");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "파일 목록을 새로고침하지 못했습니다.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const previewItem = async (item: GoogleDriveFile) => {
+    if (!accessToken) return;
+    const target = resolveDriveItem(item);
+    if (target.mimeType === GOOGLE_FOLDER_MIME) {
+      await openFolder(item);
+      return;
+    }
+    const kind = previewKind(target.mimeType);
+    if (!kind) {
+      setError("이 파일 형식은 화면 미리보기를 지원하지 않습니다. 다운로드하거나 Google 편집기에서 열어 주세요.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const isGoogleDocument = Boolean(exportFormat(target.mimeType));
+      const url = isGoogleDocument
+        ? `https://www.googleapis.com/drive/v3/files/${target.id}/export?mimeType=${encodeURIComponent("application/pdf")}`
+        : `https://www.googleapis.com/drive/v3/files/${target.id}?alt=media&supportsAllDrives=true`;
+      const response = await googleResponse(accessToken, url);
+      const blob = await response.blob();
+      const effectiveMimeType = isGoogleDocument ? "application/pdf" : blob.type || target.mimeType;
+      closePreview();
+      setPreview({ name: item.name, url: URL.createObjectURL(blob), kind: previewKind(effectiveMimeType) ?? "document", mimeType: effectiveMimeType });
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "파일 미리보기를 열지 못했습니다.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const downloadItem = async (item: GoogleDriveFile) => {
+    if (!accessToken || item.capabilities?.canDownload === false) return;
+    const target = resolveDriveItem(item);
+    const format = exportFormat(target.mimeType);
+    if (target.mimeType.startsWith(GOOGLE_MIME_PREFIX) && !format) {
+      setError("이 Google 파일 형식은 직접 다운로드를 지원하지 않습니다. Google 편집기에서 내보내 주세요.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const url = format
+        ? `https://www.googleapis.com/drive/v3/files/${target.id}/export?mimeType=${encodeURIComponent(format.mimeType)}`
+        : `https://www.googleapis.com/drive/v3/files/${target.id}?alt=media&supportsAllDrives=true`;
+      const response = await googleResponse(accessToken, url);
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = format ? `${item.name}.${format.extension}` : item.name;
+      link.click();
+      URL.revokeObjectURL(objectUrl);
+      setNotice(`'${item.name}' 다운로드를 시작했습니다.`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "파일을 다운로드하지 못했습니다.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const startMove = async (item: GoogleDriveFile) => {
+    if (!accessToken || !rootFolder) return;
+    setBusy(true);
+    setError("");
+    try {
+      const result = await googleApi<DriveListResponse>(accessToken, buildFolderChoicesUrl(category === "shared" ? selectedSharedDriveId : undefined));
+      setMoveTargets((result.files ?? []).filter((folder) => folder.id !== item.id));
+      setMoveTargetId(rootFolder.id);
+      setMoveItem(item);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "이동할 폴더 목록을 불러오지 못했습니다.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitMove = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!accessToken || !currentFolder || !moveItem || !moveTargetId) return;
+    const params = new URLSearchParams({ supportsAllDrives: "true", addParents: moveTargetId });
+    const previousParent = moveItem.parents?.[0] ?? currentFolder.id;
+    if (previousParent) params.set("removeParents", previousParent);
+    setBusy(true);
+    setError("");
+    try {
+      await googleApi<GoogleDriveFile>(accessToken, `https://www.googleapis.com/drive/v3/files/${moveItem.id}?${params}`, { method: "PATCH" });
+      setNotice(`'${moveItem.name}'을(를) 이동했습니다.`);
+      setMoveItem(null);
+      await loadItems(accessToken, currentFolder.id, query, category === "shared" ? selectedSharedDriveId : undefined);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "항목을 이동하지 못했습니다.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const folders = useMemo(
-    () => items.filter((item) => item.mimeType === GOOGLE_FOLDER_MIME),
+    () => items.filter(isDriveFolder),
     [items],
   );
   const quotaPercent = quota?.limit
@@ -544,7 +839,7 @@ export function GoogleDriveWorkspace() {
     );
   }
 
-  if (!accessToken || !rootFolder) {
+  if (!accessToken) {
     return (
       <section className="google-drive-setup">
         <Script
@@ -555,9 +850,9 @@ export function GoogleDriveWorkspace() {
         <span>GOOGLE DRIVE API</span>
         <h2>Google Drive 연결</h2>
         <p>
-          최소 권한인 <b>drive.file</b> 범위만 요청하며 PROJECT HUB에서 만든
-          파일과 폴더만 관리합니다. 액세스 토큰은 브라우저 메모리에만
-          보관됩니다.
+          내 드라이브와 참여 중인 공유 드라이브를 한 화면에서 사용합니다.
+          처음 한 번 Google 권한을 승인하면 이후에는 브라우저의 로그인 계정으로
+          자동 재연결을 시도합니다. 액세스 토큰은 브라우저 메모리에만 보관됩니다.
         </p>
         <button type="button" onClick={connect} disabled={busy || !scriptReady}>
           {busy ? "연결 중..." : "Google 계정으로 연결"}
@@ -580,13 +875,13 @@ export function GoogleDriveWorkspace() {
             <i /> Google Drive 연결됨
           </span>
           <h2>공유 드라이브</h2>
-          <p>Google Drive의 PROJECT HUB 전용 폴더에서 문서를 관리합니다.</p>
+          <p>{googleUser?.emailAddress ? `${googleUser.emailAddress} 계정의 ` : ""}실제 Google Drive 파일을 관리합니다.</p>
         </div>
         <div className="drive-title-actions">
-          <button type="button" onClick={() => openInDrive(rootFolder)}>
-            Google Drive에서 열기
+          <button type="button" disabled={busy || !currentFolder} onClick={() => void refreshCurrentFolder()}>
+            새로고침
           </button>
-          <button type="button" onClick={() => setFolderForm((open) => !open)}>
+          <button type="button" disabled={!currentFolder} onClick={() => setFolderForm((open) => !open)}>
             ＋ 새 폴더
           </button>
           <label className="primary-button file-upload-button">
@@ -595,7 +890,7 @@ export function GoogleDriveWorkspace() {
               aria-label="Google Drive 파일 업로드"
               type="file"
               multiple
-              disabled={busy}
+              disabled={busy || !currentFolder}
               onChange={(event) => {
                 const files = Array.from(event.currentTarget.files ?? []);
                 event.currentTarget.value = "";
@@ -609,7 +904,7 @@ export function GoogleDriveWorkspace() {
         </div>
       </header>
       <div className="drive-mode">
-        Google Drive API 연결 · PROJECT HUB 생성 항목만 접근
+        Google Drive API 연결 · 개인 드라이브와 공유 드라이브 실시간 동기화
       </div>
       {error ? (
         <div className="db-feed-error" role="alert">
@@ -644,14 +939,19 @@ export function GoogleDriveWorkspace() {
       ) : null}
       <div className="drive-layout">
         <aside className="folder-tree">
-          <strong>Google Drive 폴더</strong>
-          <button
-            className={path.length === 0 ? "active" : ""}
-            type="button"
-            onClick={() => void goPath(-1)}
-          >
-            ▣ PROJECT HUB
-          </button>
+          <strong>Google Drive</strong>
+          <div className="google-drive-categories" aria-label="Google Drive 카테고리">
+            <button className={category === "personal" ? "active" : ""} type="button" onClick={() => void selectCategory("personal")}>
+              <span>개인 드라이브</span><small>내 드라이브</small>
+            </button>
+            <button className={category === "shared" ? "active" : ""} type="button" onClick={() => void selectCategory("shared")}>
+              <span>공유 드라이브</span><small>{sharedDrives.length}개</small>
+            </button>
+          </div>
+          {category === "shared" ? <div className="shared-drive-list">
+            {sharedDrives.map((drive) => <button className={selectedSharedDriveId === drive.id && path.length === 0 ? "active" : ""} type="button" onClick={() => void selectCategory("shared", drive.id)} key={drive.id}>▣ {drive.name}</button>)}
+            {sharedDrives.length === 0 ? <p>참여 중인 공유 드라이브가 없습니다.</p> : null}
+          </div> : <button className={path.length === 0 ? "active" : ""} type="button" onClick={() => void goPath(-1)}>▣ 내 드라이브</button>}
           {folders.map((folder) => (
             <button
               type="button"
@@ -674,8 +974,8 @@ export function GoogleDriveWorkspace() {
         </aside>
         <div className="drive-content">
           <div className="breadcrumb">
-            <button type="button" onClick={() => void goPath(-1)}>
-              PROJECT HUB
+            <button type="button" disabled={!rootFolder} onClick={() => void goPath(-1)}>
+              {rootFolder?.name ?? "공유 드라이브"}
             </button>
             {path.map((folder, index) => (
               <span key={folder.id}>
@@ -693,7 +993,7 @@ export function GoogleDriveWorkspace() {
             />
           </div>
           <GoogleDriveDropzone
-            busy={busy}
+            busy={busy || !currentFolder}
             uploadStatus={uploadStatus || undefined}
             onFiles={(files) => void uploadFiles(files)}
           />
@@ -706,56 +1006,70 @@ export function GoogleDriveWorkspace() {
           {items.map((item) => (
             <div className="data-row file-columns drive-row" key={item.id}>
               <span>
-                <i
-                  className={`file-type ${item.mimeType === GOOGLE_FOLDER_MIME ? "folder" : "google-file"}`}
-                >
-                  {fileType(item)}
-                </i>
+                <DriveItemIcon file={item} />
                 <button
                   className="drive-name"
                   type="button"
-                  onClick={() =>
-                    item.mimeType === GOOGLE_FOLDER_MIME
-                      ? void openFolder(item)
-                      : openInDrive(item)
-                  }
+                  onClick={() => void previewItem(item)}
                 >
-                  <strong>{item.name}</strong>
-                  <small>
-                    {item.mimeType === GOOGLE_FOLDER_MIME
-                      ? "Google Drive 폴더"
-                      : item.mimeType}
-                  </small>
+                  <strong className="google-drive-item-name">{item.name}</strong>
                 </button>
               </span>
-              <span>{item.owners?.[0]?.displayName ?? "내 Google Drive"}</span>
+              <span>{item.owners?.[0]?.displayName ?? (category === "shared" ? selectedSharedDrive?.name : googleUser?.displayName ?? "내 Google Drive")}</span>
               <span>{dateText(item.modifiedTime)}</span>
               <span>
-                {item.mimeType === GOOGLE_FOLDER_MIME
+                {isDriveFolder(item)
                   ? "-"
                   : sizeText(item.size)}
                 <span className="drive-actions">
-                  <button type="button" onClick={() => openInDrive(item)}>
-                    열기
+                  <button type="button" onClick={() => void previewItem(item)}>
+                    {isDriveFolder(item) ? "폴더 열기" : "미리보기"}
                   </button>
-                  <button type="button" onClick={() => void rename(item)}>
+                  {!isDriveFolder(item) && item.capabilities?.canDownload !== false ? <button type="button" onClick={() => void downloadItem(item)}>
+                    다운로드
+                  </button> : null}
+                  {item.capabilities?.canMoveItemWithinDrive !== false ? <button type="button" onClick={() => void startMove(item)}>
+                    이동
+                  </button> : null}
+                  {item.capabilities?.canRename !== false ? <button type="button" onClick={() => void rename(item)}>
                     이름 변경
-                  </button>
-                  <button type="button" onClick={() => void moveToTrash(item)}>
+                  </button> : null}
+                  {item.capabilities?.canTrash !== false ? <button type="button" onClick={() => void moveToTrash(item)}>
                     휴지통
-                  </button>
+                  </button> : null}
+                  {!isDriveFolder(item) && item.webViewLink ? <button type="button" onClick={() => openInDrive(item)}>
+                    Google 편집기
+                  </button> : null}
                 </span>
               </span>
             </div>
           ))}
           {items.length === 0 ? (
             <div className="workspace-empty">
-              <strong>이 폴더가 비어 있습니다.</strong>
-              <span>새 폴더를 만들거나 파일을 업로드해 주세요.</span>
+              <strong>{category === "shared" && !selectedSharedDrive ? "참여 중인 공유 드라이브가 없습니다." : "이 폴더가 비어 있습니다."}</strong>
+              <span>{category === "shared" && !selectedSharedDrive ? "Google Workspace에서 공유 드라이브에 참여하면 여기에 표시됩니다." : "새 폴더를 만들거나 파일을 업로드해 주세요."}</span>
             </div>
           ) : null}
         </div>
       </div>
+      {moveItem ? <div className="google-drive-dialog" role="dialog" aria-modal="true" aria-label={`${moveItem.name} 이동`}>
+        <form onSubmit={submitMove}>
+          <div><strong>항목 이동</strong><button type="button" aria-label="이동 창 닫기" onClick={() => setMoveItem(null)}>×</button></div>
+          <p><b>{moveItem.name}</b>을(를) 이동할 폴더를 선택하세요.</p>
+          <label><span>대상 폴더</span><select aria-label="이동할 Google Drive 폴더" value={moveTargetId} onChange={(event) => setMoveTargetId(event.target.value)}>
+            {rootFolder ? <option value={rootFolder.id}>{rootFolder.name}</option> : null}
+            {moveTargets.map((folder) => <option value={folder.id} key={folder.id}>{folder.name}</option>)}
+          </select></label>
+          <footer><button type="button" onClick={() => setMoveItem(null)}>취소</button><button className="primary-button" type="submit" disabled={busy || !moveTargetId}>이동</button></footer>
+        </form>
+      </div> : null}
+      {preview ? <div className="google-drive-preview" role="dialog" aria-modal="true" aria-label={`${preview.name} 미리보기`}>
+        <div><strong>{preview.name}</strong><button type="button" aria-label="미리보기 닫기" onClick={closePreview}>×</button></div>
+        {preview.kind === "image" ? <img src={preview.url} alt={preview.name} /> : null}
+        {preview.kind === "video" ? <video src={preview.url} controls aria-label={preview.name} /> : null}
+        {preview.kind === "audio" ? <audio src={preview.url} controls aria-label={preview.name} /> : null}
+        {preview.kind === "document" ? <iframe src={preview.url} title={`${preview.name} 문서 미리보기`} /> : null}
+      </div> : null}
     </section>
   );
 }

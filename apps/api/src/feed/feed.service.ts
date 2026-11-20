@@ -14,7 +14,6 @@ import type { CreateCommentDto, CreateFeedPostDto, FeedFilterDto, PrepareAttachm
 import { InputSecurityService } from "./input-security.service";
 import { RealtimeService } from "../realtime/realtime.service";
 
-const CONTENT_MANAGER_ROLES = new Set(["CLIENT_ADMIN", "PROJECT_ADMIN", "PROJECT_PM", "PROJECT_MANAGER"]);
 const ALLOWED_FILES: Record<string, string[]> = {
   jpg: ["image/jpeg"], jpeg: ["image/jpeg"], png: ["image/png"], webp: ["image/webp"],
   pdf: ["application/pdf"], dwg: ["application/acad", "application/x-acad", "image/vnd.dwg"],
@@ -212,10 +211,11 @@ export class FeedService {
   }
 
   private assertCanManagePost(actor: Actor, membership: ProjectMemberView | null, group: GroupView, post: FeedPost) {
-    if (actor.platformRole === "PLATFORM_ADMIN" || post.authorId === actor.id || (membership && CONTENT_MANAGER_ROLES.has(membership.role))) return;
-    const groupMembership = group.memberships.find((item) => item.projectMembershipId === membership?.id);
-    if (groupMembership?.role === "GROUP_ADMIN") return;
-    throw new ForbiddenException("이 게시글을 수정하거나 보관할 권한이 없습니다.");
+    void membership;
+    void group;
+    void post;
+    if (actor.platformRole === "PLATFORM_ADMIN") return;
+    throw new ForbiddenException("관리자만 게시글을 수정하거나 삭제할 수 있습니다.");
   }
 
   private async publishMentions(actor: Actor, projectId: string, groupId: string, postId: string, title: string, content: string) {

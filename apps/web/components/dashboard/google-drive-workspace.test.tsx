@@ -1,9 +1,41 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { GoogleDriveDropzone } from "./google-drive-workspace";
+import { buildGoogleDriveListUrl, GoogleDriveDropzone, isDriveFolder, resolveDriveItem } from "./google-drive-workspace";
 
 describe("Google Drive 드래그 앤 드롭 업로드", () => {
+  it("개인 드라이브와 공유 드라이브 목록 요청을 구분한다", () => {
+    const personal = new URL(buildGoogleDriveListUrl("root", "도면"));
+    const shared = new URL(buildGoogleDriveListUrl("folder-1", "", "shared-1"));
+
+    expect(personal.searchParams.get("corpora")).toBe("user");
+    expect(personal.searchParams.get("driveId")).toBeNull();
+    expect(personal.searchParams.get("q")).toContain("name contains '도면'");
+    expect(shared.searchParams.get("corpora")).toBe("drive");
+    expect(shared.searchParams.get("driveId")).toBe("shared-1");
+    expect(shared.searchParams.get("supportsAllDrives")).toBe("true");
+    expect(shared.searchParams.get("includeItemsFromAllDrives")).toBe("true");
+  });
+
+  it("폴더 바로가기를 외부 링크가 아닌 실제 대상 폴더로 해석한다", () => {
+    const shortcut = {
+      id: "shortcut-1",
+      name: "설계 자료 바로가기",
+      mimeType: "application/vnd.google-apps.shortcut",
+      shortcutDetails: {
+        targetId: "folder-target-1",
+        targetMimeType: "application/vnd.google-apps.folder",
+      },
+    };
+
+    expect(isDriveFolder(shortcut)).toBe(true);
+    expect(resolveDriveItem(shortcut)).toEqual({
+      id: "folder-target-1",
+      mimeType: "application/vnd.google-apps.folder",
+      shortcut: true,
+    });
+  });
+
   it("여러 파일을 드롭하면 한 번에 업로드 대상으로 전달한다", () => {
     const onFiles = vi.fn();
     const files = [

@@ -87,9 +87,7 @@ describe("DatabaseIssueFeed", () => {
     render(<DatabaseIssueFeed />);
 
     expect(await screen.findByText("로컬 저장 모드")).toBeInTheDocument();
-    expect(
-      await screen.findByText("분양가·사업비 변동에 따른 수익성 민감도 검토"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("조건에 맞는 게시글이 없습니다.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "＋ 새 게시글" }));
     fireEvent.change(screen.getByLabelText("게시글 제목"), {
       target: { value: "로컬 현장 확인 요청" },
@@ -102,7 +100,7 @@ describe("DatabaseIssueFeed", () => {
     expect(await screen.findByText("로컬 현장 확인 요청")).toBeInTheDocument();
     expect(
       window.localStorage.getItem(
-        "project-hub:group-feed:v3:30000000-0000-4000-8000-000000000001:40000000-0000-4000-8000-000000000001",
+        "project-hub:group-feed:v4:30000000-0000-4000-8000-000000000001:40000000-0000-4000-8000-000000000001",
       ),
     ).toContain("로컬 현장 확인 요청");
   });

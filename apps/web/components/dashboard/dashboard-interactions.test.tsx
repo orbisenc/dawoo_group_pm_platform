@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { IssueFeed } from "./issue-feed";
@@ -7,7 +7,7 @@ import { ProjectRail } from "./project-rail";
 import { WorkspaceRight } from "./workspace-right";
 
 describe("대시보드 프로젝트와 일정 연동", () => {
-  it("프로젝트를 선택하면 해당 프로젝트 이슈만 표시한다", () => {
+  it("프로젝트를 선택해도 샘플 이슈를 만들지 않고 빈 피드를 유지한다", async () => {
     render(
       <ProjectProvider>
         <ProjectRail />
@@ -15,22 +15,18 @@ describe("대시보드 프로젝트와 일정 연동", () => {
       </ProjectProvider>,
     );
 
-    expect(
-      screen.getByText("분양가·사업비 변동에 따른 수익성 민감도 검토"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("등록된 이슈가 없습니다.")).toBeInTheDocument();
     fireEvent.click(
       screen.getByRole("button", { name: /인천 을왕리 Sunset Island/ }),
     );
 
-    expect(
-      screen.getByText("객실 가동률·ADR 기준 리조트 운영수지 검토"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("등록된 이슈가 없습니다.")).toBeInTheDocument();
     expect(
       screen.queryByText("분양가·사업비 변동에 따른 수익성 민감도 검토"),
     ).not.toBeInTheDocument();
   });
 
-  it("주요 일정 Teamup 캘린더를 확대하고 원래 크기로 복원한다", () => {
+  it("주요 일정 Teamup 캘린더를 확대하고 원래 크기로 복원한다", async () => {
     render(
       <ProjectProvider>
         <WorkspaceRight />
@@ -47,7 +43,9 @@ describe("대시보드 프로젝트와 일정 연동", () => {
       "src",
       expect.stringContaining("showDateControls=1"),
     );
-    const expandButton = screen.getByRole("button", { name: /크게 보기/ });
+    const calendarPanel = screen.getByRole("heading", { name: "주요 일정" }).closest("section");
+    expect(calendarPanel).not.toBeNull();
+    const expandButton = within(calendarPanel!).getByRole("button", { name: /크게 보기/ });
     expect(expandButton).toHaveAttribute("aria-expanded", "false");
 
     fireEvent.click(expandButton);
@@ -60,9 +58,10 @@ describe("대시보드 프로젝트와 일정 연동", () => {
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /원래 크기/ }));
-    expect(screen.getByRole("button", { name: /크게 보기/ })).toHaveAttribute(
+    expect(within(calendarPanel!).getByRole("button", { name: /크게 보기/ })).toHaveAttribute(
       "aria-expanded",
       "false",
     );
+    await screen.findByText("결재함을 연결하지 못했습니다.");
   });
 });

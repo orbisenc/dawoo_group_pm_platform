@@ -9,7 +9,7 @@
 1. Next.js와 NestJS를 분리하여 UI와 도메인 API의 책임을 명확히 한다.
 2. PostgreSQL을 업무 데이터의 단일 진실 공급원으로 사용한다.
 3. Redis는 캐시·큐·단기 상태에만 사용하며 원본 업무 데이터를 두지 않는다.
-4. 파일 본문은 S3 호환 저장소에, 메타데이터와 권한은 PostgreSQL에 저장한다.
+4. 공유 파일함의 파일 본문과 폴더 권한은 Google Drive를 원본으로 사용하며, 이슈 첨부와 내부 자산은 기존 S3 호환 저장소를 사용한다.
 5. 모든 프로젝트 데이터 접근은 프로젝트 멤버십과 권한 검사를 거친다.
 6. 초기에는 모듈형 모놀리스로 구현하고 실제 부하와 조직 경계가 확인된 뒤 분리한다.
 7. 각 개발 단계는 자동화 테스트를 통과한 뒤 다음 단계로 진행한다.
@@ -22,7 +22,8 @@
 | API | NestJS, TypeScript | REST API, 인증·인가, 도메인 로직 |
 | 데이터베이스 | PostgreSQL | 트랜잭션 업무 데이터, 검색용 메타데이터 |
 | 캐시·큐 | Redis | 세션/토큰 보조, 속도 제한, 작업 큐, 단기 캐시 |
-| 객체 저장소 | S3 호환 저장소 | 파일, 사진, 썸네일, 샘플 3D 모델 |
+| 외부 파일 저장소 | Google Drive API, Google Identity Services | 개인 드라이브와 Google Workspace 공유 드라이브 |
+| 내부 객체 저장소 | S3 호환 저장소 | 이슈 첨부, 사진, 썸네일, 샘플 3D 모델 |
 | ORM | Prisma 우선 | 스키마, 마이그레이션, 타입 안전 데이터 접근 |
 | 비동기 작업 | BullMQ 우선 | 썸네일, 알림, 임시 업로드 정리 |
 | 3D | Three.js, React Three Fiber, Drei | 클라이언트 전용 자체 생성 데모 모델 표시, `ViewerAdapter`로 향후 IFC 공급자 분리 |
@@ -89,7 +90,7 @@ project-hub/
 | IssuesModule | 이슈, 댓글, 상태 변경, 멘션 |
 | FeedModule | 그룹별 블로그형 게시글, 댓글·답글, 태그·검색, 첨부 업로드 확정 |
 | RealtimeModule | WebSocket 인증·그룹 룸, Redis Pub/Sub, 알림, 재접속 이벤트 동기화 |
-| DriveModule | 프로젝트 폴더 트리, 그룹 ACL 상속, 파일 메타데이터·버전, 이슈 연결, S3 서명·미리보기 URL |
+| DriveModule | Google OAuth 연결 상태, 개인/공유 드라이브 탐색, Google Drive 파일 작업과 오류 매핑 |
 | CalendarModule | 월간·주간·목록 일정, 프로젝트별 사용자 정의 마일스톤, 담당자·참여자 알림, 이슈·S3 첨부 연결, 그룹 ACL |
 | ViewerModule | 샘플 모델 메타데이터와 접근 URL |
 | ApprovalsModule | 결재 문서, 결재선, 승인·반려 상태 머신 |
@@ -194,17 +195,17 @@ Issue/Comment 1─N Attachment N─1 FileVersion
 ### 9.3 파일
 
 ```text
-Project 1─N Folder (parent_id 자기 참조)
-Folder 1─N File 1─N FileVersion
-FileVersion 1─N Attachment
-Folder/File 1─N ResourceAccessOverride
+User 1─1 GoogleOAuthGrant
+GoogleAccount 1─1 MyDrive
+GoogleAccount N─M SharedDrive
+MyDrive/SharedDrive 1─N GoogleDriveFile
 ```
 
-- 파일 논리 개체와 실제 바이너리 버전을 분리한다.
-- 객체 키 예시: `organizations/{orgId}/projects/{projectId}/files/{fileId}/versions/{versionId}`
-- DB 트랜잭션과 객체 업로드는 하나의 원자 트랜잭션이 아니므로 `PENDING_UPLOAD → AVAILABLE → QUARANTINED/DELETED` 상태를 둔다.
-- 체크섬, 크기, MIME, 원본 파일명, 객체 키, 업로더를 기록한다.
-- 폴더 순환 참조는 서비스와 DB 제약 가능한 범위에서 차단한다.
+- Google Drive API를 공유 파일함의 원본으로 사용하고 로컬 예시 데이터나 S3 폴더 트리를 병합하지 않는다.
+- 액세스 토큰은 브라우저 메모리에만 두며 로그, 로컬 저장소, 데이터베이스에 기록하지 않는다.
+- 최초 권한 승인 여부를 비민감 불리언 플래그로 브라우저에 기록해 재방문 시 로그인된 Google 계정으로 무동의 재연결을 시도한다. 액세스 토큰 자체는 저장하지 않는다.
+- 개인 드라이브 목록은 `corpora=user`, 공유 드라이브 목록은 `corpora=drive`, `driveId`, `supportsAllDrives=true`를 사용해 분리한다.
+- 프로젝트 권한과 Google Drive 권한을 함께 강제해야 하는 서버 중계 방식은 운영 전 별도 보안 단계에서 구현한다.
 
 ### 9.4 결재
 
@@ -250,26 +251,21 @@ POST   /api/v1/projects/:projectId/approvals/:id/submit
 POST   /api/v1/projects/:projectId/approvals/:id/approve
 ```
 
-## 11. 파일 업로드와 다운로드 흐름
+## 11. Google Drive 업로드와 열기 흐름
 
 ### 11.1 업로드
 
-1. 클라이언트가 파일명, 크기, MIME, 연결 대상 정보를 API에 전달한다.
-2. API가 프로젝트 권한, 확장자, 크기, 저장 용량을 검증한다.
-3. API가 `PENDING_UPLOAD` 레코드와 짧은 유효기간의 사전 서명 URL을 생성한다.
-4. 클라이언트가 객체 저장소에 직접 업로드한다.
-5. 클라이언트가 업로드 완료 API를 호출한다.
-6. API 또는 워커가 객체 존재, 크기, 체크섬을 확인하고 `AVAILABLE`로 변경한다.
-7. 이미지이면 썸네일 생성 작업을 큐에 넣는다.
+1. 사용자가 Google OAuth로 Drive 전체 접근 범위를 승인한다.
+2. 클라이언트가 대상 개인/공유 드라이브와 폴더의 실제 Google 권한을 확인한다.
+3. 클라이언트가 Google Drive 재개 가능 업로드 세션을 생성한다.
+4. 파일 본문을 Google 업로드 URL로 직접 전송한다.
+5. 완료 후 대상 폴더를 다시 조회해 실제 Drive 상태를 표시한다.
 
 ### 11.2 다운로드
 
-1. 클라이언트가 파일 버전 다운로드를 요청한다.
-2. API가 멤버십과 폴더 예외 권한을 검사한다.
-3. 짧은 유효기간의 다운로드 URL 또는 프록시 정책을 반환한다.
-4. 접근 이벤트를 감사 정책에 따라 기록한다.
-
-운영 전 악성코드 검사 도입 지점을 업로드 완료와 공개 가능 상태 사이에 둔다.
+1. 클라이언트는 Google Drive가 반환한 `webViewLink`로 파일을 연다.
+2. Google 계정과 공유 드라이브의 실제 권한으로 열람·다운로드 가능 여부가 결정된다.
+3. 액세스 토큰 만료 시 Google Identity Services를 통해 새 토큰을 요청한다.
 
 ## 12. Redis와 비동기 처리
 
@@ -376,6 +372,14 @@ CI/CD 기본 순서:
 ```
 
 DB 마이그레이션은 하위 호환 가능한 확장-전환-정리 방식으로 수행하고 애플리케이션 배포와 롤백 순서를 문서화한다.
+
+### 17.1 Google 공유 드라이브 회원 초대
+
+- `@gmail.com` 또는 `@googlemail.com` 가입자는 관리자 승인 완료 후에만 초대 대상이 된다.
+- 초대 요청은 PostgreSQL `google_drive_invitations`에 먼저 기록하고 전용 BullMQ 큐에서 재시도한다.
+- 서버 서비스 계정은 이름이 정확히 `다우그룹_공유 드라이브`인 공유 드라이브를 찾아 `writer` 권한을 부여한다.
+- 서비스 계정 자격증명이 없거나 Google API 호출이 실패해도 회원 승인은 유지하며 초대 상태를 대기 또는 실패로 보존한다.
+- 서비스 계정 비공개 키와 Google 액세스 토큰은 DB, 큐 데이터, 로그에 기록하지 않는다.
 
 ## 18. 아키텍처 결정 기록 대상
 

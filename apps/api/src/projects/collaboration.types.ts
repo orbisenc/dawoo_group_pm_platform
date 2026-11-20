@@ -48,6 +48,7 @@ export abstract class CollaborationRepository {
   abstract findProject(projectId: string): Promise<ProjectView | null>;
   abstract createProjectWithAdmin(data: CreateProjectData, adminUserId: string): Promise<ProjectView>;
   abstract updateProject(projectId: string, data: UpdateProjectData): Promise<ProjectView>;
+  abstract archiveProject(projectId: string): Promise<ProjectView>;
   abstract findMembership(projectId: string, userId: string): Promise<ProjectMemberView | null>;
   abstract findMemberById(projectId: string, memberId: string): Promise<ProjectMemberView | null>;
   abstract listMembers(projectId: string): Promise<ProjectMemberView[]>;

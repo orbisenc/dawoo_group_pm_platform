@@ -27,18 +27,12 @@ describe("프로젝트 그룹 이슈 피드", () => {
     expect(
       screen.getByRole("heading", { name: "시공 관리" }),
     ).toBeInTheDocument();
-    expect(
-      await screen.findByText("토지비 조달 및 브릿지론 구조 비교안"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("조건에 맞는 게시글이 없습니다.")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /기획 관리/ }));
-    expect(
-      await screen.findByText("PF 약정 선행조건 자료 요청"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("조건에 맞는 게시글이 없습니다.")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /공지 사항/ }));
-    expect(
-      await screen.findByText("프로젝트 정기회의 운영 안내"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("조건에 맞는 게시글이 없습니다.")).toBeInTheDocument();
   });
 });

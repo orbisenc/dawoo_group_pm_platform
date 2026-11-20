@@ -1,4 +1,4 @@
-import { NotFoundException } from "@nestjs/common";
+import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { S3Client } from "@aws-sdk/client-s3";
 
@@ -57,5 +57,10 @@ describe("FeedService 프로젝트·그룹 범위", () => {
     })).rejects.toThrow("HTML을 사용할 수 없습니다");
     expect(authorizeGroup).toHaveBeenCalledWith(actor, projectId, groupId, true);
     expect(create).not.toHaveBeenCalled();
+  });
+
+  it("일반 사용자는 자신이 작성한 게시글도 수정하지 못한다", async () => {
+    findFirst.mockResolvedValueOnce({ id: "post-1", projectId, groupId, authorId: actor.id, assigneeId: null, title: "작성 게시글", content: "내용", status: "REGISTERED" });
+    await expect(service.update(actor, projectId, groupId, "post-1", { title: "무단 수정" })).rejects.toBeInstanceOf(ForbiddenException);
   });
 });

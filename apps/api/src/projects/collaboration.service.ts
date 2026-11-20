@@ -38,6 +38,15 @@ export class CollaborationService {
     return this.repository.updateProject(projectId, data);
   }
 
+  async archiveProject(actor: Actor, projectId: string) {
+    if (actor.platformRole !== "PLATFORM_ADMIN") {
+      throw new ForbiddenException("관리자만 프로젝트를 삭제할 수 있습니다.");
+    }
+    const project = await this.repository.findProject(projectId);
+    if (!project) throw new NotFoundException("프로젝트를 찾을 수 없습니다.");
+    return this.repository.archiveProject(projectId);
+  }
+
   async listMembers(actor: Actor, projectId: string) {
     await this.requireProjectMembership(actor, projectId);
     return this.repository.listMembers(projectId);

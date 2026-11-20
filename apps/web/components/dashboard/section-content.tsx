@@ -8,6 +8,7 @@ import {
 } from "./functional-workspaces";
 import { IssuesWorkspace } from "./issues-workspace";
 import { ProjectsWorkspace } from "./projects-workspace";
+import { AdminWorkspace } from "./admin-workspace";
 
 function PageTitle({
   title,
@@ -68,61 +69,6 @@ function ApprovalsScreen() {
   return <ApprovalWorkspace />;
 }
 
-function AdminScreen() {
-  const members = [
-    ["김지훈", "한강디벨롭먼트", "프로젝트 관리자", "활성"],
-    ["이수현", "아크원 건축사사무소", "프로젝트 PM", "활성"],
-    ["박민수", "대한건설", "참여자", "활성"],
-    ["최예진", "용산구청 협의팀", "검토자", "초대됨"],
-  ];
-  return (
-    <>
-      <PageTitle
-        title="프로젝트 관리자"
-        description="프로젝트 참여자와 역할, 접근 범위를 관리합니다."
-        action="참여자 초대"
-      />
-      <div className="admin-grid">
-        <aside className="settings-menu">
-          <button className="active">멤버 및 권한</button>
-          <button>프로젝트 정보</button>
-          <button>알림 설정</button>
-          <button>감사 로그</button>
-          <button>저장공간</button>
-        </aside>
-        <section className="data-panel admin-table">
-          <div className="panel-heading">
-            <div>
-              <span className="panel-kicker">MEMBERS</span>
-              <h3>참여자 48명</h3>
-            </div>
-            <span className="demo-chip light">샘플 데이터</span>
-          </div>
-          <div className="data-head member-columns">
-            <span>이름</span>
-            <span>소속 조직</span>
-            <span>프로젝트 역할</span>
-            <span>상태</span>
-          </div>
-          {members.map((row) => (
-            <div className="data-row member-columns" key={row[0]}>
-              <span>
-                <i className="mini-avatar">{row[0]?.[0]}</i>
-                <strong>{row[0]}</strong>
-              </span>
-              <span>{row[1]}</span>
-              <span>{row[2]}</span>
-              <span>
-                <b className="member-status">{row[3]}</b>　⋮
-              </span>
-            </div>
-          ))}
-        </section>
-      </div>
-    </>
-  );
-}
-
 function CadScreen() {
   return (
     <>
@@ -164,6 +110,6 @@ export function SectionContent({ slug }: { slug: string }) {
   if (slug === "viewer") return <ViewerScreen />;
   if (slug === "cad") return <CadScreen />;
   if (slug === "approvals") return <ApprovalsScreen />;
-  if (slug === "admin") return <AdminScreen />;
+  if (slug === "admin") return <AdminWorkspace />;
   return null;
 }

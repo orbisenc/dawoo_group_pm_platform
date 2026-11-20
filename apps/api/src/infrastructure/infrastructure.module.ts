@@ -31,6 +31,7 @@ function redisConnection(urlValue: string) {
       }),
     }),
     BullModule.registerQueue({ name: "system-events" }),
+    BullModule.registerQueue({ name: "google-drive-invitations" }),
   ],
   providers: [
     PrismaService,

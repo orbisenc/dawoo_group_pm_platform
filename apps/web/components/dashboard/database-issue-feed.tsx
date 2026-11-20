@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { io } from "socket.io-client";
+import { useOptionalAuth } from "../auth/auth-context";
 
 const typeLabels = {
   NOTICE: "공지사항",
@@ -120,6 +121,7 @@ function samplePost(
 }
 
 function initialLocalPosts(groupId: string): FeedPost[] {
+  if (process.env.NEXT_PUBLIC_ENABLE_FEED_SAMPLES !== "true") return [];
   const reply = (id: string, content: string, author: string): Comment => ({
     id,
     content,
@@ -268,7 +270,7 @@ function initialLocalPosts(groupId: string): FeedPost[] {
 }
 
 function localKey(projectId: string, groupId: string) {
-  return `project-hub:group-feed:v3:${projectId}:${groupId}`;
+  return `project-hub:group-feed:v4:${projectId}:${groupId}`;
 }
 
 function readLocalPosts(projectId: string, groupId: string) {
@@ -276,7 +278,7 @@ function readLocalPosts(projectId: string, groupId: string) {
     const saved = window.localStorage.getItem(localKey(projectId, groupId));
     if (saved) return JSON.parse(saved) as FeedPost[];
   } catch {
-    /* 손상된 로컬 데이터는 초기 샘플로 복구한다. */
+    /* 손상된 로컬 데이터는 빈 피드로 복구한다. */
   }
   const posts = initialLocalPosts(groupId);
   try {
@@ -359,6 +361,8 @@ export function DatabaseIssueFeed({
   groupId?: string;
   groupName?: string;
 }) {
+  const auth = useOptionalAuth();
+  const canManagePosts = auth?.isAdmin ?? false;
   const [mode, setMode] = useState<Mode>("loading");
   const [token, setToken] = useState("");
   const [posts, setPosts] = useState<FeedPost[]>([]);
@@ -451,19 +455,22 @@ export function DatabaseIssueFeed({
     let active = true;
     void (async () => {
       try {
-        const session = await fetch("/backend/auth/dev-session", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ email: "admin@projecthub.local" }),
-        });
-        if (!session.ok) throw new Error("API unavailable");
-        const data = (await session.json()) as { accessToken: string };
+        let accessToken = auth?.token ?? "";
+        if (!accessToken) {
+          const session = await fetch("/backend/auth/dev-session", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ email: "partner@projecthub.local" }),
+          });
+          if (!session.ok) throw new Error("API unavailable");
+          accessToken = ((await session.json()) as { accessToken: string }).accessToken;
+        }
         const items = await api<Assignee[]>(
           `/projects/${projectId}/groups/${groupId}/feed/assignees`,
-          data.accessToken,
+          accessToken,
         );
         if (!active) return;
-        setToken(data.accessToken);
+        setToken(accessToken);
         setAssignees(items);
         setMode("api");
       } catch {
@@ -475,7 +482,7 @@ export function DatabaseIssueFeed({
     return () => {
       active = false;
     };
-  }, [groupId, projectId]);
+  }, [auth?.token, groupId, projectId]);
 
   useEffect(() => {
     if (mode === "loading") return;
@@ -1047,12 +1054,12 @@ export function DatabaseIssueFeed({
                   {post.assignee ? ` · 담당 ${post.assignee.name}` : ""}
                 </span>
                 <span>댓글 {post._count?.comments ?? 0}</span>
-                <button type="button" onClick={() => startEdit(post)}>
+                {canManagePosts ? <><button type="button" onClick={() => startEdit(post)}>
                   수정
                 </button>
                 <button type="button" onClick={() => void archive(post.id)}>
-                  보관
-                </button>
+                  삭제
+                </button></> : null}
               </footer>
             </article>
           ))

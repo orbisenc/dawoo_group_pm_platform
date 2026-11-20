@@ -22,16 +22,9 @@ type Issue = { id: string; title: string };
 type UploadTask = { id: string; name: string; progress: number; status: "uploading" | "failed" | "done"; message?: string; file: File; target?: DriveFile; destinationId?: string | null };
 type Preview = { name: string; url: string; mimeType: string };
 
-const now = "2026-10-28T09:00:00.000Z";
-const sampleFolders: Folder[] = ["01_사업관리", "02_토지계약", "03_인허가", "04_설계도면", "05_금융PF", "06_계약발주", "07_공사공정", "08_회의록"].map((name, index) => ({ id: `folder-${index + 1}`, parentId: null, name, isRestricted: false, createdAt: now, updatedAt: now, createdBy: { name: "김지훈" }, groupAccess: [] }));
-const sampleFiles: DriveFile[] = [
-  { id: "file-1", folderId: "folder-4", name: "A-201_기준층평면도_R3.dwg", createdAt: now, updatedAt: now, createdBy: { name: "한서진" }, versions: [{ id: "version-1", version: 3, originalName: "A-201_기준층평면도_R3.dwg", mimeType: "application/octet-stream", size: "26004685", sha256: "4a8c1f8f3b46bbf6022e9c41850f96b9bf9f2b9f723d1b59c3f8dd72f22a9831", createdAt: now, uploadedBy: { name: "한서진" } }], issueLinks: [] },
-  { id: "file-2", folderId: "folder-1", name: "10월_공정회의록_03.pdf", createdAt: now, updatedAt: now, createdBy: { name: "박민수" }, versions: [{ id: "version-2", version: 1, originalName: "10월_공정회의록_03.pdf", mimeType: "application/pdf", size: "3355443", sha256: "872fe2472d2e86cb60b49abe04cd7f55f606a2115b3315d1b446a1178f3d979e", createdAt: now, uploadedBy: { name: "박민수" } }] },
-];
-
 function localStore(): Store {
-  try { const saved = window.localStorage.getItem(storageKey); if (saved) { const store = JSON.parse(saved) as Store; for (const standard of sampleFolders) { const legacy = store.folders.find((item) => item.id === standard.id && item.parentId === null); if (legacy) legacy.name = standard.name; else if (!store.folders.some((item) => item.parentId === null && item.name === standard.name)) store.folders.push({ ...standard }); } const sampleDrawing = store.files.find((item) => item.id === "file-1"); if (sampleDrawing) sampleDrawing.folderId = "folder-4"; window.localStorage.setItem(storageKey, JSON.stringify(store)); return store; } } catch { /* 손상된 저장 데이터는 초기화한다. */ }
-  const store = { folders: sampleFolders, files: sampleFiles }; window.localStorage.setItem(storageKey, JSON.stringify(store)); return store;
+  try { const saved = window.localStorage.getItem(storageKey); if (saved) return JSON.parse(saved) as Store; } catch { /* 손상된 저장 데이터는 초기화한다. */ }
+  const store: Store = { folders: [], files: [] }; window.localStorage.setItem(storageKey, JSON.stringify(store)); return store;
 }
 function saveLocal(store: Store) { window.localStorage.setItem(storageKey, JSON.stringify(store)); }
 function uid() { return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`; }
@@ -87,7 +80,7 @@ export function DatabaseDriveWorkspace() {
 
   const refresh = useCallback(async (search: string) => { if (mode === "local") loadLocal(currentId, search); else if (mode === "api") await loadApi(token, currentId, search); }, [currentId, loadApi, loadLocal, mode, token]);
 
-  useEffect(() => { let active = true; void (async () => { try { const response = await fetch("/backend/auth/dev-session", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "admin@projecthub.local" }) }); if (!response.ok) throw new Error(); const session = await response.json() as { accessToken: string }; if (!active) return; const projectGroups = await api<Group[]>(`/projects/${projectId}/groups`, session.accessToken); setToken(session.accessToken); setGroups(projectGroups); setMode("api"); await loadApi(session.accessToken, null, ""); } catch { if (!active) return; setMode("local"); loadLocal(null, ""); } })(); return () => { active = false; }; }, [loadApi, loadLocal]);
+  useEffect(() => { let active = true; void (async () => { try { const response = await fetch("/backend/auth/dev-session", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "partner@projecthub.local" }) }); if (!response.ok) throw new Error(); const session = await response.json() as { accessToken: string }; if (!active) return; const projectGroups = await api<Group[]>(`/projects/${projectId}/groups`, session.accessToken); setToken(session.accessToken); setGroups(projectGroups); setMode("api"); await loadApi(session.accessToken, null, ""); } catch { if (!active) return; setMode("local"); loadLocal(null, ""); } })(); return () => { active = false; }; }, [loadApi, loadLocal]);
   useEffect(() => { if (mode === "loading") return; const timer = window.setTimeout(() => void refresh(query).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "파일을 불러오지 못했습니다.")), 180); return () => window.clearTimeout(timer); }, [mode, query, refresh]);
 
   const openFolder = async (folder: Folder) => { setQuery(""); setPath((current) => [...current, folder]); if (mode !== "api") loadLocal(folder.id, ""); else await loadApi(token, folder.id, ""); };

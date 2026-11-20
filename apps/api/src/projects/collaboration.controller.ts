@@ -14,6 +14,7 @@ export class CollaborationController {
   @Post() createProject(@CurrentActor() actor: Actor, @Body() dto: CreateProjectDto) { return this.service.createProject(actor, dto); }
   @Get(":projectId") getProject(@CurrentActor() actor: Actor, @Param("projectId") projectId: string) { return this.service.getProject(actor, projectId); }
   @Patch(":projectId") updateProject(@CurrentActor() actor: Actor, @Param("projectId") projectId: string, @Body() dto: UpdateProjectDto) { return this.service.updateProject(actor, projectId, dto); }
+  @Delete(":projectId") archiveProject(@CurrentActor() actor: Actor, @Param("projectId") projectId: string) { return this.service.archiveProject(actor, projectId); }
 
   @Get(":projectId/members") listMembers(@CurrentActor() actor: Actor, @Param("projectId") projectId: string) { return this.service.listMembers(actor, projectId); }
   @Post(":projectId/members") inviteMember(@CurrentActor() actor: Actor, @Param("projectId") projectId: string, @Body() dto: InviteMemberDto) { return this.service.inviteMember(actor, projectId, dto); }

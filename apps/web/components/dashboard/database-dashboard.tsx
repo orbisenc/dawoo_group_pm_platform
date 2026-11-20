@@ -232,7 +232,7 @@ export function DatabaseDashboard() {
       const sessionResponse = await fetch("/backend/auth/dev-session", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email: "admin@projecthub.local" }),
+        body: JSON.stringify({ email: "partner@projecthub.local" }),
       });
       if (!sessionResponse.ok) throw new Error();
       const session = (await sessionResponse.json()) as { accessToken: string };
@@ -265,7 +265,7 @@ export function DatabaseDashboard() {
         const sessionResponse = await fetch("/backend/auth/dev-session", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ email: "admin@projecthub.local" }),
+          body: JSON.stringify({ email: "partner@projecthub.local" }),
         });
         if (!sessionResponse.ok) throw new Error();
         const session = (await sessionResponse.json()) as {

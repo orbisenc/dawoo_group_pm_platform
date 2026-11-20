@@ -32,6 +32,12 @@ enum PlatformRole {
   USER
 }
 
+enum AccountApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum GroupRole {
   GROUP_ADMIN
   MEMBER
@@ -116,40 +122,77 @@ enum ApprovalActionType {
   WITHDRAWN
 }
 
+enum GoogleDriveInvitationStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
 model User {
-  id                          String                     @id @default(uuid()) @db.Uuid
-  email                       String                     @unique @db.VarChar(320)
-  name                        String                     @db.VarChar(100)
-  passwordHash                String                     @map("password_hash") @db.VarChar(255)
-  isActive                    Boolean                    @default(true) @map("is_active")
-  platformRole                PlatformRole               @default(USER) @map("platform_role")
-  createdAt                   DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt                   DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id                          String                        @id @default(uuid()) @db.Uuid
+  username                    String?                       @unique @db.VarChar(50)
+  email                       String                        @unique @db.VarChar(320)
+  name                        String                        @db.VarChar(100)
+  passwordHash                String                        @map("password_hash") @db.VarChar(255)
+  isActive                    Boolean                       @default(true) @map("is_active")
+  approvalStatus              AccountApprovalStatus         @default(APPROVED) @map("approval_status")
+  approvedAt                  DateTime?                     @map("approved_at") @db.Timestamptz(3)
+  approvedById                String?                       @map("approved_by_id") @db.Uuid
+  platformRole                PlatformRole                  @default(USER) @map("platform_role")
+  createdAt                   DateTime                      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                   DateTime                      @updatedAt @map("updated_at") @db.Timestamptz(3)
   organizationMemberships     OrganizationMembership[]
   projectMemberships          ProjectMembership[]
-  createdGroups               CollaborationGroup[]       @relation("GroupCreator")
-  authoredFeedPosts           FeedPost[]                 @relation("FeedPostAuthor")
-  assignedFeedPosts           FeedPost[]                 @relation("FeedPostAssignee")
+  createdGroups               CollaborationGroup[]          @relation("GroupCreator")
+  authoredFeedPosts           FeedPost[]                    @relation("FeedPostAuthor")
+  assignedFeedPosts           FeedPost[]                    @relation("FeedPostAssignee")
   feedComments                FeedComment[]
   uploadedFeedAttachments     FeedAttachment[]
-  createdDriveFolders         DriveFolder[]              @relation("DriveFolderCreator")
-  createdDriveFiles           DriveFile[]                @relation("DriveFileCreator")
-  uploadedDriveVersions       DriveFileVersion[]         @relation("DriveVersionUploader")
+  createdDriveFolders         DriveFolder[]                 @relation("DriveFolderCreator")
+  createdDriveFiles           DriveFile[]                   @relation("DriveFileCreator")
+  uploadedDriveVersions       DriveFileVersion[]            @relation("DriveVersionUploader")
   notifications               Notification[]
-  createdDriveIssueLinks      DriveFileIssueLink[]       @relation("DriveIssueLinkCreator")
-  createdCalendarEvents       CalendarEvent[]            @relation("CalendarEventCreator")
-  assignedCalendarEvents      CalendarEvent[]            @relation("CalendarEventAssignee")
+  createdDriveIssueLinks      DriveFileIssueLink[]          @relation("DriveIssueLinkCreator")
+  createdCalendarEvents       CalendarEvent[]               @relation("CalendarEventCreator")
+  assignedCalendarEvents      CalendarEvent[]               @relation("CalendarEventAssignee")
   calendarParticipations      CalendarEventParticipant[]
   uploadedCalendarAttachments CalendarEventAttachment[]
   calendarReminders           CalendarReminder[]
-  createdApprovalDocuments    ApprovalDocument[]         @relation("ApprovalDocumentCreator")
+  createdApprovalDocuments    ApprovalDocument[]            @relation("ApprovalDocumentCreator")
   approvalRouteMemberships    ApprovalRouteMember[]
+  createdApprovalTemplates    ApprovalRouteTemplate[]       @relation("ApprovalRouteTemplateCreator")
+  approvalTemplateMemberships ApprovalRouteTemplateMember[]
   approvalSteps               ApprovalStep[]
   approvalActions             ApprovalAction[]
   approvalNotifications       ApprovalNotification[]
   auditLogs                   AuditLog[]
+  googleDriveInvitation       GoogleDriveInvitation?        @relation("GoogleDriveInvitationTarget")
+  requestedDriveInvitations   GoogleDriveInvitation[]        @relation("GoogleDriveInvitationRequester")
 
   @@map("users")
+}
+
+model GoogleDriveInvitation {
+  id           String                      @id @default(uuid()) @db.Uuid
+  userId       String                      @unique @map("user_id") @db.Uuid
+  requestedById String                     @map("requested_by_id") @db.Uuid
+  email        String                      @db.VarChar(320)
+  driveName    String                      @default("다우그룹_공유 드라이브") @map("drive_name") @db.VarChar(200)
+  role         String                      @default("writer") @db.VarChar(30)
+  status       GoogleDriveInvitationStatus @default(PENDING)
+  attempts     Int                         @default(0)
+  permissionId String?                     @map("permission_id") @db.VarChar(255)
+  lastError    String?                     @map("last_error") @db.VarChar(500)
+  invitedAt    DateTime?                   @map("invited_at") @db.Timestamptz(3)
+  createdAt    DateTime                    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user         User                        @relation("GoogleDriveInvitationTarget", fields: [userId], references: [id], onDelete: Cascade)
+  requestedBy  User                        @relation("GoogleDriveInvitationRequester", fields: [requestedById], references: [id], onDelete: Restrict)
+
+  @@index([status, updatedAt])
+  @@map("google_drive_invitations")
 }
 
 model Organization {
@@ -181,34 +224,35 @@ model OrganizationMembership {
 }
 
 model Project {
-  id                    String                    @id @default(uuid()) @db.Uuid
-  organizationId        String                    @map("organization_id") @db.Uuid
-  code                  String                    @db.VarChar(50)
-  name                  String                    @db.VarChar(200)
-  description           String?                   @db.Text
-  status                ProjectStatus             @default(PREPARING)
-  startsAt              DateTime?                 @map("starts_at") @db.Date
-  endsAt                DateTime?                 @map("ends_at") @db.Date
-  createdAt             DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt             DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(3)
-  organization          Organization              @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  memberships           ProjectMembership[]
-  groups                CollaborationGroup[]
-  feedPosts             FeedPost[]
-  feedComments          FeedComment[]
-  feedAttachments       FeedAttachment[]
-  realtimeEvents        RealtimeEvent[]
-  notifications         Notification[]
-  driveIssueLinks       DriveFileIssueLink[]
-  driveFolders          DriveFolder[]
-  driveFiles            DriveFile[]
-  driveVersions         DriveFileVersion[]
-  calendarEvents        CalendarEvent[]
-  calendarAttachments   CalendarEventAttachment[]
-  approvalDocuments     ApprovalDocument[]
-  approvalRevisions     ApprovalRevision[]
-  approvalNotifications ApprovalNotification[]
-  auditLogs             AuditLog[]
+  id                     String                    @id @default(uuid()) @db.Uuid
+  organizationId         String                    @map("organization_id") @db.Uuid
+  code                   String                    @db.VarChar(50)
+  name                   String                    @db.VarChar(200)
+  description            String?                   @db.Text
+  status                 ProjectStatus             @default(PREPARING)
+  startsAt               DateTime?                 @map("starts_at") @db.Date
+  endsAt                 DateTime?                 @map("ends_at") @db.Date
+  createdAt              DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  organization           Organization              @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  memberships            ProjectMembership[]
+  groups                 CollaborationGroup[]
+  feedPosts              FeedPost[]
+  feedComments           FeedComment[]
+  feedAttachments        FeedAttachment[]
+  realtimeEvents         RealtimeEvent[]
+  notifications          Notification[]
+  driveIssueLinks        DriveFileIssueLink[]
+  driveFolders           DriveFolder[]
+  driveFiles             DriveFile[]
+  driveVersions          DriveFileVersion[]
+  calendarEvents         CalendarEvent[]
+  calendarAttachments    CalendarEventAttachment[]
+  approvalDocuments      ApprovalDocument[]
+  approvalRouteTemplates ApprovalRouteTemplate[]
+  approvalRevisions      ApprovalRevision[]
+  approvalNotifications  ApprovalNotification[]
+  auditLogs              AuditLog[]
 
   @@unique([organizationId, code])
   @@index([organizationId, status])
@@ -534,8 +578,8 @@ model ApprovalDocument {
   id              String                 @id @default(uuid()) @db.Uuid
   projectId       String                 @map("project_id") @db.Uuid
   createdById     String                 @map("created_by_id") @db.Uuid
-  fileId          String                 @map("file_id") @db.Uuid
-  fileVersionId   String                 @map("file_version_id") @db.Uuid
+  fileId          String?                @map("file_id") @db.Uuid
+  fileVersionId   String?                @map("file_version_id") @db.Uuid
   title           String                 @db.VarChar(200)
   content         String                 @db.Text
   status          ApprovalStatus         @default(DRAFT)
@@ -547,8 +591,8 @@ model ApprovalDocument {
   updatedAt       DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
   project         Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
   createdBy       User                   @relation("ApprovalDocumentCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  file            DriveFile              @relation(fields: [fileId], references: [id], onDelete: Restrict)
-  fileVersion     DriveFileVersion       @relation(fields: [fileVersionId], references: [id], onDelete: Restrict)
+  file            DriveFile?             @relation(fields: [fileId], references: [id], onDelete: Restrict)
+  fileVersion     DriveFileVersion?      @relation(fields: [fileVersionId], references: [id], onDelete: Restrict)
   routeMembers    ApprovalRouteMember[]
   revisions       ApprovalRevision[]
   actions         ApprovalAction[]
@@ -557,6 +601,38 @@ model ApprovalDocument {
   @@index([projectId, status, updatedAt(sort: Desc)])
   @@index([createdById, status])
   @@map("approval_documents")
+}
+
+model ApprovalRouteTemplate {
+  id          String                        @id @default(uuid()) @db.Uuid
+  projectId   String                        @map("project_id") @db.Uuid
+  createdById String                        @map("created_by_id") @db.Uuid
+  name        String                        @db.VarChar(120)
+  description String?                       @db.VarChar(500)
+  createdAt   DateTime                      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime                      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  project     Project                       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy   User                          @relation("ApprovalRouteTemplateCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  members     ApprovalRouteTemplateMember[]
+
+  @@unique([projectId, name])
+  @@index([projectId, updatedAt(sort: Desc)])
+  @@map("approval_route_templates")
+}
+
+model ApprovalRouteTemplateMember {
+  id         String                @id @default(uuid()) @db.Uuid
+  templateId String                @map("template_id") @db.Uuid
+  approverId String                @map("approver_id") @db.Uuid
+  sequence   Int
+  createdAt  DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  template   ApprovalRouteTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  approver   User                  @relation(fields: [approverId], references: [id], onDelete: Restrict)
+
+  @@unique([templateId, sequence])
+  @@unique([templateId, approverId])
+  @@index([approverId, templateId])
+  @@map("approval_route_template_members")
 }
 
 model ApprovalRouteMember {
@@ -575,23 +651,23 @@ model ApprovalRouteMember {
 }
 
 model ApprovalRevision {
-  id                 String           @id @default(uuid()) @db.Uuid
-  documentId         String           @map("document_id") @db.Uuid
-  projectId          String           @map("project_id") @db.Uuid
-  fileVersionId      String           @map("file_version_id") @db.Uuid
+  id                 String            @id @default(uuid()) @db.Uuid
+  documentId         String            @map("document_id") @db.Uuid
+  projectId          String            @map("project_id") @db.Uuid
+  fileVersionId      String?           @map("file_version_id") @db.Uuid
   revision           Int
-  titleSnapshot      String           @map("title_snapshot") @db.VarChar(200)
-  contentSnapshot    String           @map("content_snapshot") @db.Text
-  fileNameSnapshot   String           @map("file_name_snapshot") @db.VarChar(255)
-  fileVersion        Int              @map("file_version")
-  fileSha256         String           @map("file_sha256") @db.Char(64)
-  storageKeySnapshot String           @map("storage_key_snapshot") @db.VarChar(500)
-  mimeTypeSnapshot   String           @map("mime_type_snapshot") @db.VarChar(150)
-  sizeSnapshot       BigInt           @map("size_snapshot")
-  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
-  document           ApprovalDocument @relation(fields: [documentId], references: [id], onDelete: Restrict)
-  project            Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  sourceVersion      DriveFileVersion @relation(fields: [fileVersionId], references: [id], onDelete: Restrict)
+  titleSnapshot      String            @map("title_snapshot") @db.VarChar(200)
+  contentSnapshot    String            @map("content_snapshot") @db.Text
+  fileNameSnapshot   String?           @map("file_name_snapshot") @db.VarChar(255)
+  fileVersion        Int?              @map("file_version")
+  fileSha256         String?           @map("file_sha256") @db.Char(64)
+  storageKeySnapshot String?           @map("storage_key_snapshot") @db.VarChar(500)
+  mimeTypeSnapshot   String?           @map("mime_type_snapshot") @db.VarChar(150)
+  sizeSnapshot       BigInt?           @map("size_snapshot")
+  createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  document           ApprovalDocument  @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  project            Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceVersion      DriveFileVersion? @relation(fields: [fileVersionId], references: [id], onDelete: Restrict)
   steps              ApprovalStep[]
   actions            ApprovalAction[]
 
