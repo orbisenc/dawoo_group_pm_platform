@@ -28,6 +28,8 @@ apps/api/src/generated/prisma/
 .logs/
 .firebase/
 firebase-debug.log
+.local/cadviewer-conversion-server/
+.local/cadviewer-react-sample/
 .DS_Store
 Thumbs.db
 .idea/

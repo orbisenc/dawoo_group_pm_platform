@@ -171,8 +171,30 @@ function driveItemIconKind(file: GoogleDriveFile): DriveItemIconKind {
   return "file";
 }
 
-function DriveItemIcon({ file }: { file: GoogleDriveFile }) {
+export function DriveItemIcon({ file }: { file: GoogleDriveFile }) {
   const kind = driveItemIconKind(file);
+
+  if (kind === "pdf") {
+    return (
+      <span className="file-type drive-item-icon pdf" aria-hidden="true">
+        <svg className="pdf-document-icon" viewBox="0 0 40 48" fill="none">
+          <path
+            className="pdf-document-page"
+            d="M7 2.5h17.5L35 13v29.5a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-37a3 3 0 0 1 3-3Z"
+          />
+          <path className="pdf-document-fold" d="M24.5 2.5V13H35" />
+          <path
+            className="pdf-document-mark"
+            d="M10.4 29.2c2.6-4.4 6.7-6.5 10.7-8.3 3.5-1.6 7.8-2.4 9.1-.7 1.5 2-2 3.2-5.5 1.9-4.4-1.7-7.9-6.2-8.9-10.6-.7-3.2-.1-6 1.5-5.9 2.2.1 2.5 4 1.2 8.7-1.4 5.3-4 11.4-6.7 15.4-1.7 2.5-3.8 4.2-5 3.4-1.1-.8.2-2.6 3.6-3.9Z"
+          />
+          <text className="pdf-document-label" x="20" y="41" textAnchor="middle">
+            PDF
+          </text>
+        </svg>
+      </span>
+    );
+  }
+
   const icon = (() => {
     switch (kind) {
       case "folder":
@@ -193,7 +215,6 @@ function DriveItemIcon({ file }: { file: GoogleDriveFile }) {
         return <><path d="m12 3.5 8 4.5v8L12 20.5 4 16V8l8-4.5Z" /><path d="m4 8 8 4.5L20 8M12 12.5v8" /></>;
       case "shortcut":
         return <><path d="M9.5 14.5 14.5 9" /><path d="M8 17H6.5a3.5 3.5 0 0 1 0-7H10M14 7h3.5a3.5 3.5 0 0 1 0 7H14" /></>;
-      case "pdf":
       case "document":
       case "file":
       default:

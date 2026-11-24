@@ -25,5 +25,16 @@ export function validateEnvironment(environment: Environment): Environment {
     throw new Error("API_PORT는 1부터 65535 사이의 정수여야 합니다.");
   }
 
+  const apsClientId = environment.APS_CLIENT_ID?.trim();
+  const apsClientSecret = environment.APS_CLIENT_SECRET?.trim();
+  if (Boolean(apsClientId) !== Boolean(apsClientSecret)) {
+    throw new Error("APS_CLIENT_ID와 APS_CLIENT_SECRET은 함께 설정해야 합니다.");
+  }
+
+  const apsBucketKey = environment.APS_BUCKET_KEY?.trim();
+  if (apsBucketKey && !/^[a-z0-9][a-z0-9-]{1,126}[a-z0-9]$/.test(apsBucketKey)) {
+    throw new Error("APS_BUCKET_KEY는 소문자 영문, 숫자, 하이픈으로 구성된 3~128자여야 합니다.");
+  }
+
   return { ...environment, API_PORT: String(apiPort) };
 }

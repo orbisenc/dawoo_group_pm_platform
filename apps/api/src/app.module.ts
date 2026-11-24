@@ -14,6 +14,7 @@ import { ApprovalModule } from "./approvals/approval.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { ObservabilityModule } from "./observability/observability.module";
 import { AuditTrailModule } from "./observability/audit-trail.module";
+import { CadModule } from "./cad/cad.module";
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { AuditTrailModule } from "./observability/audit-trail.module";
     HealthModule,
     ObservabilityModule,
     AuditTrailModule,
+    CadModule,
   ],
 })
 export class AppModule {}

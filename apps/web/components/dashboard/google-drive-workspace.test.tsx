@@ -1,9 +1,34 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { buildGoogleDriveListUrl, GoogleDriveDropzone, isDriveFolder, resolveDriveItem } from "./google-drive-workspace";
+import { buildGoogleDriveListUrl, DriveItemIcon, GoogleDriveDropzone, isDriveFolder, resolveDriveItem } from "./google-drive-workspace";
 
 describe("Google Drive 드래그 앤 드롭 업로드", () => {
+  it.each([
+    ["폴더", "도면", "application/vnd.google-apps.folder", "folder"],
+    ["PDF", "사업계획서.pdf", "application/pdf", "pdf"],
+    ["문서", "회의록.docx", "application/octet-stream", "document"],
+    ["스프레드시트", "사업비.xlsx", "application/octet-stream", "spreadsheet"],
+    ["프레젠테이션", "착수보고.pptx", "application/octet-stream", "presentation"],
+    ["CAD", "배치도.dwg", "application/octet-stream", "cad"],
+  ])("%s 항목에 파일 형식 심볼을 표시한다", (_label, name, mimeType, kind) => {
+    const { container } = render(
+      <DriveItemIcon file={{ id: `item-${kind}`, name, mimeType }} />,
+    );
+
+    expect(container.querySelector(`.drive-item-icon.${kind} svg`)).not.toBeNull();
+  });
+
+  it("PDF 항목에 문서 외곽선과 PDF 표기가 있는 전용 심볼을 표시한다", () => {
+    const { container } = render(
+      <DriveItemIcon file={{ id: "pdf-1", name: "사업계획서.pdf", mimeType: "application/pdf" }} />,
+    );
+
+    expect(container.querySelector(".pdf-document-page")).not.toBeNull();
+    expect(container.querySelector(".pdf-document-mark")).not.toBeNull();
+    expect(container.querySelector(".pdf-document-label")).toHaveTextContent("PDF");
+  });
+
   it("개인 드라이브와 공유 드라이브 목록 요청을 구분한다", () => {
     const personal = new URL(buildGoogleDriveListUrl("root", "도면"));
     const shared = new URL(buildGoogleDriveListUrl("folder-1", "", "shared-1"));

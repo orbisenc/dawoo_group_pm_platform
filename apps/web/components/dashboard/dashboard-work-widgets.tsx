@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 
 import { useOptionalAuth } from "../auth/auth-context";
 import { DatabaseApprovalWorkspace } from "./database-approval-workspace";
-import { GoogleDriveWorkspace } from "./google-drive-workspace";
+import { DriveItemIcon, GoogleDriveWorkspace } from "./google-drive-workspace";
 import { useProject } from "./project-context";
 
 const GOOGLE_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive";
@@ -83,12 +83,6 @@ function formatSize(value?: string) {
   if (bytes >= 1_073_741_824) return `${(bytes / 1_073_741_824).toFixed(1)} GB`;
   if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toFixed(1)} MB`;
   return `${Math.max(1, Math.ceil(bytes / 1_024))} KB`;
-}
-
-function fileLabel(item: DriveItem) {
-  if (item.mimeType === GOOGLE_FOLDER_MIME) return "폴더";
-  const extension = item.name.split(".").pop()?.toUpperCase();
-  return extension && extension.length <= 5 ? extension : "파일";
 }
 
 async function googleApi<T>(token: string, url: string): Promise<T> {
@@ -385,12 +379,12 @@ export function DashboardSharedDriveCard() {
                 {!loading && items.map((item) =>
                   item.mimeType === GOOGLE_FOLDER_MIME ? (
                     <button className="mini-file is-folder" type="button" onClick={() => void openFolder(item)} key={item.id}>
-                      <b>폴더</b>
+                      <DriveItemIcon file={item} />
                       <span><strong>{item.name}</strong><small>폴더 열기</small></span>
                     </button>
                   ) : (
                     <a className="mini-file" href={item.webViewLink ?? `https://drive.google.com/drive/folders/${selectedDriveId}`} target="_blank" rel="noreferrer" key={item.id}>
-                      <b>{fileLabel(item)}</b>
+                      <DriveItemIcon file={item} />
                       <span><strong>{item.name}</strong><small>{formatSize(item.size)} · {formatDate(item.modifiedTime)}</small></span>
                     </a>
                   ),

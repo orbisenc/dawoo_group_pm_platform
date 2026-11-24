@@ -39,13 +39,13 @@ test.describe("출시 핵심 사용자 여정", () => {
     await expect(page.getByRole("button", { name: /새 이슈 등록/ })).toBeVisible();
   });
 
-  test("데모 3D 뷰어가 범위를 고지하고 기본 조작을 제공한다", async ({ page }) => {
+  test("3D/BIM 뷰어가 지원 형식과 모델 선택 방법을 안내한다", async ({ page }) => {
     await loginWithLocalAdmin(page);
     await page.goto("/viewer");
     await expect(page.getByRole("heading", { name: "3D/BIM 뷰어", level: 2 })).toBeVisible();
-    await expect(page.getByText("3D 데모 모델 — 실제 BIM 연동 전")).toBeVisible();
-    await expect(page.getByRole("button", { name: "건물 전체 보기" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "3D 시점 초기화" })).toBeVisible();
-    await expect(page.getByText(/회전.*확대\/축소.*화면 이동/)).toBeVisible();
+    await expect(page.getByLabel("Autodesk APS 3D/BIM 뷰어")).toBeVisible();
+    await expect(page.getByText("오른쪽 Google Drive에서 3D 모델을 끌어 놓으세요.")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "연결된 3D 모델" })).toBeVisible();
+    await expect(page.getByText(/IFC.*OBJ.*STP.*STEP.*SKP/).first()).toBeVisible();
   });
 });

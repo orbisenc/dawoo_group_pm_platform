@@ -25,4 +25,19 @@ describe("validateEnvironment", () => {
       "API_PORT는 1부터 65535 사이의 정수여야 합니다.",
     );
   });
+
+  it("Autodesk APS 자격증명은 Client ID와 Secret을 함께 요구한다", () => {
+    expect(() => validateEnvironment({ ...validEnvironment, APS_CLIENT_ID: "client-only" })).toThrow(
+      "APS_CLIENT_ID와 APS_CLIENT_SECRET은 함께 설정해야 합니다.",
+    );
+  });
+
+  it("Autodesk APS 버킷 키에 안전한 문자만 허용한다", () => {
+    expect(() => validateEnvironment({
+      ...validEnvironment,
+      APS_CLIENT_ID: "client",
+      APS_CLIENT_SECRET: "secret",
+      APS_BUCKET_KEY: "Project Hub Bucket",
+    })).toThrow("APS_BUCKET_KEY는 소문자 영문, 숫자, 하이픈으로 구성된 3~128자여야 합니다.");
+  });
 });

@@ -1,0 +1,37 @@
+import { IsInt, IsString, Matches, Max, MaxLength, Min } from "class-validator";
+
+export class PrepareBimUploadDto {
+  @IsString()
+  @MaxLength(255)
+  @Matches(/\.(ifc|obj|stp|step|skp)$/i, {
+    message: "IFC, OBJ, STP, STEP 또는 SKP 파일만 열 수 있습니다.",
+  })
+  fileName!: string;
+
+  @IsInt()
+  @Min(1)
+  @Max(125 * 1024 * 1024)
+  size!: number;
+
+  @IsString()
+  @MaxLength(150)
+  contentType!: string;
+
+  @IsString()
+  @MaxLength(300)
+  sourceId!: string;
+
+  @IsString()
+  @MaxLength(100)
+  modifiedTime!: string;
+}
+
+export class CompleteBimUploadDto {
+  @IsString()
+  ticket!: string;
+}
+
+export class BimTicketQueryDto {
+  @IsString()
+  ticket!: string;
+}

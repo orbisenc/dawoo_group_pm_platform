@@ -22,7 +22,7 @@ export const navigation: NavigationItem[] = [
   { href: "/issues", label: "이슈 피드", icon: "issues" },
   { href: "/drive", label: "공유 드라이브", icon: "drive" },
   { href: "/calendar", label: "일정", icon: "calendar" },
-  { href: "/viewer", label: "3D/BIM 뷰어", icon: "viewer", badge: "샘플" },
+  { href: "/viewer", label: "3D/BIM 뷰어", icon: "viewer", badge: "3D" },
   { href: "/cad", label: "CAD 도면", icon: "cad" },
   { href: "/approvals", label: "결재", icon: "approvals" },
   { href: "/admin", label: "관리자", icon: "admin" },
