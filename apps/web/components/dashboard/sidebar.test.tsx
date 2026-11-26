@@ -71,6 +71,29 @@ describe("사이드바 사용자 메뉴", () => {
     expect(logout).toHaveBeenCalledOnce();
   });
 
+  it("관리자와 프로젝트 사이에 프로젝트 기획 현황과 뷰어 기능을 순서대로 표시한다", async () => {
+    render(<Sidebar />);
+    await screen.findByLabelText("이슈 피드 미확인 4건");
+
+    const navigation = screen.getByRole("navigation", { name: "주요 메뉴" });
+    const labels = Array.from(navigation.querySelectorAll("a, .nav-section-label")).map((element) => element.textContent?.trim());
+    expect(labels).toEqual([
+      "통합 대시보드",
+      "이슈 피드4",
+      "공유 드라이브",
+      "일정",
+      "결재1",
+      "관리자",
+      "프로젝트 기획 현황",
+      "2D 도면 현황",
+      "3D 모델 현황",
+      "뷰어 기능",
+      "CAD 도면 뷰어",
+      "3D/BIM 뷰어3D",
+      "프로젝트3",
+    ]);
+  });
+
   it("Esc 키로 열린 메뉴를 닫는다", async () => {
     render(<Sidebar />);
     expect(await screen.findByLabelText("이슈 피드 미확인 4건")).toBeInTheDocument();

@@ -24,8 +24,8 @@
 | 캐시·큐 | Redis | 세션/토큰 보조, 속도 제한, 작업 큐, 단기 캐시 |
 | 외부 파일 저장소 | Google Drive API, Google Identity Services | 개인 드라이브와 Google Workspace 공유 드라이브 |
 | 내부 객체 저장소 | S3 호환 저장소 | 이슈 첨부, 사진, 썸네일, 샘플 3D 모델 |
-| 2D CAD 표시 | CAD Viewer for Drive | 포함된 외부 웹앱에 Google Drive DWG/DXF 파일 ID를 Open-with 상태로 전달 |
-| 3D/BIM 변환·표시 | Autodesk APS OSS, Model Derivative, Viewer SDK | Google Drive 모델 직접 전송, SVF2 변환, 브라우저 3D 표시 |
+| 2D CAD 표시 | CAD Viewer for Drive | 재사용 가능한 최상위 전용 창에 Google Drive DWG/DXF 파일 ID를 Open-with 상태로 전달 |
+| 3D/BIM 표시 | 3D Viewer for Google Drive | 재사용 가능한 최상위 전용 창에 Google Drive 3D 모델 파일 ID를 Open-with 상태로 전달 |
 | ORM | Prisma 우선 | 스키마, 마이그레이션, 타입 안전 데이터 접근 |
 | 비동기 작업 | BullMQ 우선 | 썸네일, 알림, 임시 업로드 정리 |
 | 3D | Three.js, React Three Fiber, Drei | 클라이언트 전용 자체 생성 데모 모델 표시, `ViewerAdapter`로 향후 IFC 공급자 분리 |
@@ -35,13 +35,24 @@
 ### CAD Viewer for Drive 2D CAD 경계
 
 1. PROJECT HUB 웹은 Google Drive 읽기 전용 OAuth로 사용자의 DWG/DXF 목록만 표시한다.
-2. 브라우저는 선택한 Google Drive 파일 ID를 표준 Open-with `state`로 포함된 `cadviewer.co` 웹앱에 전달한다.
+2. 브라우저는 선택한 Google Drive 파일 ID를 표준 Open-with `state`로 이름이 고정된 `cadviewer.co` 최상위 창에 전달한다.
 3. CAD Viewer for Drive가 자체 계정·권한과 외부 처리 경계에서 DWG/DXF 렌더링과 탐색 기능을 제공한다.
 4. PROJECT HUB API는 Google OAuth 토큰, CAD 원본과 CAD Viewer 계정 토큰을 중계하거나 저장하지 않는다.
 5. 마지막 Open-with URL은 프로젝트별 현재 브라우저 세션에 최대 12시간 보존한다.
-6. 브라우저 교차 출처 정책상 부모 페이지는 로컬 파일을 외부 iframe에 자동 주입하지 않는다.
+6. 브라우저 교차 출처 정책상 부모 페이지는 로컬 파일을 외부 창에 자동 주입하지 않으며, 사용자는 CADViewer의 `From computer` 기능을 사용한다.
+7. Google OAuth는 임베디드 사용자 에이전트를 허용하지 않으므로 CAD 화면에 외부 iframe을 사용하지 않는다. 인증과 렌더링은 동일한 이름의 최상위 전용 창에서 수행한다.
 
-운영 전환 시 CAD Viewer for Drive의 약관·요금제·Google 권한 범위·데이터 처리 정책과 iframe/Open-with 계약을 별도로 검토한다.
+운영 전환 시 CAD Viewer for Drive의 약관·요금제·Google 권한 범위·데이터 처리 정책과 Open-with 계약을 별도로 검토한다.
+
+### 3D Viewer for Google Drive 경계
+
+1. PROJECT HUB는 Google Drive 읽기 전용 OAuth로 사용자의 지원 3D 모델 목록만 표시한다.
+2. 브라우저는 선택한 Google Drive 파일 ID를 표준 Open-with `state`로 이름이 고정된 `3dviewer.co` 최상위 창에 전달한다.
+3. 3D Viewer for Google Drive가 자체 계정·권한과 파일 처리 경계에서 모델 렌더링을 제공한다.
+4. PROJECT HUB API는 Google OAuth 토큰, 3D 원본과 외부 뷰어 계정 토큰을 중계하거나 저장하지 않는다.
+5. 마지막 Open-with URL과 최근 모델 5개는 프로젝트별 현재 브라우저 세션에 최대 12시간 보존한다.
+6. 브라우저 교차 출처 정책상 로컬 파일은 외부 창에 자동 주입하지 않고 3D Viewer의 컴퓨터 파일 열기 기능을 사용한다.
+7. 현재 연결 대상은 GLTF, GLB, STL, OBJ, FBX, STP/STEP, PLY, 3DM이며 IFC와 SKP는 지원 대상으로 표시하지 않는다.
 
 세부 라이브러리는 구현 단계에서 결정하되 같은 목적의 라이브러리를 중복 도입하지 않는다.
 
@@ -105,7 +116,7 @@ project-hub/
 | RealtimeModule | WebSocket 인증·그룹 룸, Redis Pub/Sub, 알림, 재접속 이벤트 동기화 |
 | DriveModule | Google OAuth 연결 상태, 개인/공유 드라이브 탐색, Google Drive 파일 작업과 오류 매핑 |
 | CalendarModule | 월간·주간·목록 일정, 프로젝트별 사용자 정의 마일스톤, 담당자·참여자 알림, 이슈·S3 첨부 연결, 그룹 ACL |
-| CadModule | APS 3D/BIM 업로드 티켓, 프로젝트 권한, 변환 상태와 Viewer 토큰; 기존 CAD API 호환 경계 |
+| CadModule | 기존 CAD/BIM 업로드 API 호환 경계. 현재 외부 CAD·3D Viewer 웹 경로에서는 호출하지 않음 |
 | ViewerModule | 기존 샘플 모델 메타데이터와 접근 URL |
 | ApprovalsModule | 결재 문서, 결재선, 승인·반려 상태 머신 |
 | NotificationsModule | 앱 내 알림, 이메일 작업 요청 |

@@ -25,7 +25,9 @@ export function Sidebar() {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const visibleNavigation = navigation.filter((item) => item.href !== "/admin" || isAdmin);
   const projectNavigation = visibleNavigation.find((item) => item.href === "/projects");
-  const primaryNavigation = visibleNavigation.filter((item) => item.href !== "/projects");
+  const viewerNavigation = visibleNavigation.filter((item) => item.group === "viewer");
+  const assetStatusNavigation = visibleNavigation.filter((item) => item.group === "asset-status");
+  const primaryNavigation = visibleNavigation.filter((item) => item.href !== "/projects" && !item.group);
 
   useEffect(() => {
     let active = true;
@@ -135,6 +137,10 @@ export function Sidebar() {
       <div className="workspace-label">WORKSPACE</div>
       <nav aria-label="주요 메뉴">
         {primaryNavigation.map(navigationLink)}
+        <span className="nav-section-label">프로젝트 기획 현황</span>
+        {assetStatusNavigation.map(navigationLink)}
+        <span className="nav-section-label">뷰어 기능</span>
+        {viewerNavigation.map(navigationLink)}
         {projectNavigation ? navigationLink(projectNavigation) : null}
       </nav>
 

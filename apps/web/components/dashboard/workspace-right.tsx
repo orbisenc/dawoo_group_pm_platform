@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-import { BuildingPreview } from "./building-preview";
+import { DashboardApartmentPreview } from "./dashboard-apartment-preview";
 import {
   DashboardApprovalCard,
   DashboardSharedDriveCard,
@@ -18,19 +18,15 @@ export function WorkspaceRight() {
       <div className="bim-viewer-card">
         <div className="bim-toolbar">
           <strong>{selectedProject.name} · BIM 통합 모델 미리보기</strong>
-          <Link href="/viewer">인터랙티브 뷰어 열기</Link>
+          <Link href="/model-status">3D 모델 현황 열기</Link>
           <div>
-            <b>DEMO</b>
-            <span>고해상도 샘플</span>
+            <b>GLB</b>
+            <span>고정 모델</span>
           </div>
         </div>
-        <Link
-          className="dashboard-viewer-preview"
-          href="/viewer"
-          aria-label="3D 데모 모델 뷰어로 이동"
-        >
-          <BuildingPreview compact />
-        </Link>
+        <div className="dashboard-viewer-preview">
+          <DashboardApartmentPreview />
+        </div>
       </div>
       <div className="right-widgets">
         <DashboardSharedDriveCard />

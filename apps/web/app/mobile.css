@@ -1,0 +1,810 @@
+/* Mobile-only application layout. Desktop rules above 850px remain unchanged. */
+@media (max-width: 850px) {
+  html {
+    scroll-padding-top: 112px;
+  }
+
+  body {
+    min-width: 320px;
+    font-size: 16px;
+  }
+
+  .app-shell {
+    display: block;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    width: 100%;
+    height: auto;
+    padding: 0;
+    box-shadow: 0 8px 24px rgba(4, 20, 49, 0.18);
+  }
+
+  .sidebar-brand {
+    height: 54px;
+    padding: 3px 14px;
+    justify-content: flex-start;
+  }
+
+  .brand-logo-frame {
+    width: 112px;
+    height: 48px;
+    flex-basis: 112px;
+  }
+
+  .brand-logo-frame img {
+    width: 100%;
+    height: 100%;
+  }
+
+  .workspace-label,
+  .nav-section-label,
+  .sidebar-project,
+  .sidebar-user {
+    display: none;
+  }
+
+  .sidebar nav {
+    min-width: 0;
+    padding: 7px 10px 9px;
+    flex: none;
+    flex-direction: row;
+    gap: 6px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .sidebar nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-item {
+    min-width: max-content;
+    height: 42px;
+    padding: 0 12px;
+    flex: 0 0 auto;
+    gap: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 9px;
+    font-size: 14px;
+    scroll-snap-align: start;
+  }
+
+  .nav-item:hover {
+    transform: none;
+  }
+
+  .nav-item::before {
+    display: none;
+  }
+
+  .nav-item small {
+    min-width: 20px;
+    padding: 2px 5px;
+    font-size: 12px;
+  }
+
+  .app-frame {
+    min-width: 0;
+  }
+
+  .app-header {
+    position: relative;
+    top: auto;
+    min-height: 66px;
+    height: auto;
+    padding: 11px 16px;
+    gap: 12px;
+  }
+
+  .app-header > div:first-child {
+    min-width: 0;
+  }
+
+  .app-header p {
+    display: none;
+  }
+
+  .app-header h1 {
+    margin: 0;
+    overflow: hidden;
+    font-size: 18px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .header-actions {
+    min-width: 0;
+    gap: 6px;
+  }
+
+  .global-search,
+  .help-button,
+  .header-account span {
+    display: none;
+  }
+
+  .header-account {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .icon-button,
+  .header-account button,
+  .admin-registration-button {
+    min-height: 42px;
+  }
+
+  .header-account button,
+  .admin-registration-button {
+    padding: 0 10px;
+    font-size: 13px;
+  }
+
+  .notification-panel {
+    position: fixed;
+    top: 124px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-height: calc(100dvh - 140px);
+  }
+
+  .app-content {
+    width: 100%;
+    padding: 20px 16px 42px;
+  }
+
+  .page-intro,
+  .section-title,
+  .admin-section-title,
+  .drive-title,
+  .approval-system .approval-title,
+  .calendar-title,
+  .issue-workspace-title {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .page-intro h2,
+  .section-title h2,
+  .drive-title h2,
+  .calendar-title h2,
+  .approval-system .approval-title h2 {
+    font-size: clamp(24px, 7vw, 30px);
+  }
+
+  .page-intro p,
+  .section-title p,
+  .drive-title p,
+  .calendar-title p,
+  .approval-system .approval-title p {
+    font-size: 14px;
+    line-height: 1.65;
+  }
+
+  .intro-actions,
+  .section-toolbar,
+  .drive-title-actions,
+  .approval-toolbar,
+  .calendar-toolbar {
+    width: 100%;
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .intro-actions > *,
+  .drive-title-actions > *,
+  .approval-toolbar > *,
+  .calendar-toolbar > * {
+    min-height: 44px;
+  }
+
+  .dawoo-dashboard,
+  .dashboard-grid,
+  .metric-grid,
+  .project-card-grid,
+  .admin-summary-grid,
+  .admin-grid,
+  .approval-template-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dawoo-overview,
+  .dawoo-projects,
+  .data-panel,
+  .database-drive .drive-layout,
+  .cad-viewer-panel,
+  .cad-drive-panel {
+    border-radius: 12px;
+  }
+
+  .dawoo-overview-visual {
+    min-height: 360px;
+  }
+
+  .dawoo-overview-copy {
+    inset: auto 18px 22px;
+  }
+
+  .dawoo-overview-copy h2 {
+    font-size: 25px;
+  }
+
+  .dawoo-overview-copy p {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .dawoo-overview-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dawoo-overview-actions > * {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .dawoo-overview-data,
+  .overview-quick-links,
+  .portfolio-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .portfolio-summary {
+    width: 100%;
+  }
+
+  .overview-location {
+    padding-right: 0;
+    padding-bottom: 18px;
+    border-right: 0;
+    border-bottom: 1px solid #dce5f0;
+  }
+
+  .dawoo-projects-heading,
+  .dawoo-project-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dawoo-filter-tabs {
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .dawoo-filter-tabs button {
+    min-height: 42px;
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .dawoo-project-search {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .reference-dashboard,
+  .reference-dashboard.issue-page-workspace {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    margin: 0;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    overflow: visible;
+  }
+
+  .reference-dashboard > .project-rail,
+  .reference-dashboard.issue-page-workspace > .project-rail {
+    display: none;
+  }
+
+  .reference-dashboard > .issue-feed,
+  .reference-dashboard.issue-page-workspace > .issue-feed {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+  }
+
+  .reference-dashboard .feed-heading,
+  .feed-toolbar,
+  .feed-composer-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .reference-dashboard .feed-heading > div:last-child,
+  .reference-dashboard .feed-heading label,
+  .feed-toolbar > *,
+  .feed-composer-actions > * {
+    width: 100%;
+  }
+
+  .reference-dashboard .workspace-right {
+    min-width: 0;
+    grid-column: auto;
+    grid-template-rows: 390px auto;
+  }
+
+  .reference-dashboard .bim-toolbar {
+    padding-inline: 12px;
+    gap: 8px;
+  }
+
+  .reference-dashboard .bim-toolbar > strong {
+    font-size: 14px;
+  }
+
+  .reference-dashboard .bim-toolbar > a {
+    padding-inline: 10px;
+    font-size: 11px;
+  }
+
+  .reference-dashboard .bim-toolbar > div {
+    display: none;
+  }
+
+  .reference-dashboard .right-widgets {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .database-drive .drive-title-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .database-drive .drive-title-actions > button,
+  .database-drive .file-upload-button {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .drive-folder-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .drive-folder-form > input,
+  .drive-folder-form > select,
+  .drive-folder-form > button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .database-drive .drive-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .database-drive .folder-tree,
+  .database-drive .data-head {
+    display: none;
+  }
+
+  .database-drive .breadcrumb {
+    align-items: stretch;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .database-drive .breadcrumb input {
+    width: 100%;
+    min-height: 44px;
+    margin-left: 0;
+  }
+
+  .database-drive .drive-content {
+    overflow: visible;
+  }
+
+  .database-drive .drive-row.file-columns {
+    min-width: 0;
+    margin: 10px;
+    padding: 14px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    border: 1px solid #dce5ee;
+    border-radius: 11px;
+    background: #fff;
+  }
+
+  .database-drive .drive-row.file-columns > span {
+    min-width: 0;
+    display: flex !important;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .database-drive .drive-row.file-columns > span:first-child {
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e7edf3;
+  }
+
+  .database-drive .drive-row.file-columns > span:nth-child(2),
+  .database-drive .drive-row.file-columns > span:nth-child(3),
+  .database-drive .drive-row.file-columns > span:nth-child(4) {
+    color: #65788b;
+    font-size: 13px;
+  }
+
+  .database-drive .drive-name {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .database-drive .drive-actions {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .database-drive .drive-actions button {
+    min-height: 40px;
+    flex: 1 1 92px;
+  }
+
+  .drive-version-panel {
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+    width: auto;
+    max-height: calc(100dvh - 20px);
+  }
+
+  .admin-grid {
+    gap: 14px;
+  }
+
+  .settings-menu {
+    width: 100%;
+    padding-bottom: 4px;
+    flex-direction: row;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .settings-menu button {
+    min-height: 44px;
+    flex: 0 0 auto;
+  }
+
+  .admin-table .data-head {
+    display: none;
+  }
+
+  .admin-table .data-row.member-columns,
+  .admin-table .data-row.registration-columns {
+    margin: 10px;
+    padding: 14px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    border: 1px solid #dce5ee;
+    border-radius: 11px;
+  }
+
+  .admin-table .data-row.member-columns > *,
+  .admin-table .data-row.registration-columns > * {
+    min-width: 0;
+    display: flex !important;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-table select,
+  .admin-decision-actions button {
+    min-height: 42px;
+  }
+
+  .calendar-card,
+  .calendar-system .calendar-grid-scroll,
+  .approval-system .approval-table {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  .calendar-toolbar > button,
+  .calendar-toolbar > select,
+  .calendar-toolbar > label {
+    flex: 1 1 130px;
+  }
+
+  .approval-list-head {
+    display: none;
+  }
+
+  .approval-list-row {
+    margin: 10px;
+    width: calc(100% - 20px);
+    min-height: 0;
+    padding: 14px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 9px;
+    border: 1px solid #dfe7ec;
+    border-radius: 10px;
+  }
+
+  .approval-list-row > :nth-child(n) {
+    min-width: 0;
+    grid-column: 1;
+  }
+
+  .approval-form-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .approval-form-actions button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .approval-system .approval-detail {
+    padding: 18px;
+  }
+
+  .approval-system .approval-history p {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 5px;
+  }
+
+  .cad-workspace-title {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .cad-workspace-title h2 {
+    font-size: 27px;
+  }
+
+  .cad-workspace-title p {
+    font-size: 14px;
+    line-height: 1.65;
+  }
+
+  .cad-provider-state {
+    width: 100%;
+    min-height: 42px;
+    align-self: stretch;
+    justify-content: center;
+  }
+
+  .cad-layout {
+    height: auto;
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .cad-viewer-panel {
+    height: min(500px, 64dvh);
+    min-height: 400px;
+  }
+
+  .cad-drive-panel {
+    height: min(460px, 62dvh);
+    min-height: 400px;
+  }
+
+  .cad-viewer-toolbar {
+    padding: 10px;
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .cad-viewer-toolbar > div {
+    width: 100%;
+  }
+
+  .cad-viewer-toolbar > button {
+    min-height: 42px;
+    flex: 1 1 120px;
+    font-size: 13px;
+  }
+
+  .cad-viewer-window-launch {
+    padding: 20px;
+  }
+
+  .cad-viewer-window-launch > strong {
+    font-size: clamp(22px, 7vw, 28px);
+  }
+
+  .cad-viewer-window-launch > p,
+  .cad-viewer-window-launch > small {
+    font-size: 13px;
+  }
+
+  .cad-viewer-window-launch > button,
+  .cad-drive-heading button,
+  .cad-drive-empty button {
+    min-height: 44px;
+    font-size: 13px;
+  }
+
+  .cad-drive-item {
+    min-height: 68px;
+  }
+
+  .cad-drive-item strong {
+    font-size: 14px;
+  }
+
+  .cad-drive-item small,
+  .cad-drive-panel > footer,
+  .cad-drive-selector button,
+  .cad-drive-path button,
+  .cad-drive-path strong {
+    font-size: 12px;
+  }
+
+  .google-drive-dropzone {
+    margin: 12px;
+    padding: 20px;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .google-drive-dropzone button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .dashboard-workspace-overlay {
+    inset: 0;
+    border-radius: 0;
+  }
+
+  .dashboard-workspace-overlay-content {
+    padding: 12px;
+  }
+
+  .modal-backdrop,
+  .admin-modal-backdrop,
+  .project-dialog-backdrop {
+    padding: 10px;
+  }
+
+  .admin-registration-modal,
+  .project-create-dialog {
+    max-height: calc(100dvh - 20px);
+    border-radius: 14px;
+  }
+
+  .asset-status-title {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .asset-status-title h2 {
+    font-size: 27px;
+  }
+
+  .asset-ready-badge,
+  .asset-pending-badge {
+    align-self: flex-start;
+  }
+
+  .asset-status-layout {
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .asset-model-viewer,
+  .asset-drawing-viewer {
+    min-height: 480px;
+  }
+
+  .asset-drawing-viewer {
+    min-height: 480px;
+  }
+
+  .drawing-transform-layer {
+    padding: 72px 12px 60px;
+  }
+
+  .drawing-viewer-toolbar {
+    top: 10px;
+  }
+
+  .drawing-viewer-help {
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+  }
+
+  .asset-status-panel {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 620px) {
+  .app-header {
+    padding-inline: 12px;
+  }
+
+  .app-header h1 {
+    max-width: 104px;
+  }
+
+  .admin-registration-button {
+    max-width: 86px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-content {
+    padding: 16px 12px 36px;
+  }
+
+  .dawoo-overview-visual {
+    min-height: 350px;
+  }
+
+  .dawoo-overview-data,
+  .dawoo-projects-heading,
+  .dawoo-project-toolbar,
+  .approval-system .approval-detail {
+    padding: 16px;
+  }
+
+  .database-drive .drive-title-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cad-viewer-panel {
+    height: 460px;
+    min-height: 460px;
+  }
+
+  .cad-drive-panel {
+    height: 420px;
+    min-height: 420px;
+  }
+
+  .cad-viewer-window-launch {
+    gap: 11px;
+    padding: 16px;
+  }
+
+  .cad-viewer-window-launch > button {
+    width: 100%;
+  }
+
+  .public-document-page {
+    padding: 0;
+  }
+
+  .public-document {
+    padding: 28px 20px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .asset-model-viewer,
+  .asset-drawing-viewer {
+    min-height: 420px;
+  }
+
+  .asset-model-help {
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+    font-size: 11px;
+  }
+}

@@ -5778,6 +5778,48 @@ button {
   overflow: hidden;
   color: inherit;
 }
+.dashboard-apartment-preview {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #071724;
+}
+.dashboard-apartment-preview canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+.dashboard-model-state {
+  width: 100%;
+  height: 100%;
+  min-height: 250px;
+  padding: 24px;
+  display: grid;
+  place-items: center;
+  color: #c9dedf;
+  background: #071724;
+  font-size: 13px;
+  text-align: center;
+}
+.dashboard-model-state.error {
+  color: #ffd5d2;
+  background: #3c2022;
+}
+.dashboard-model-help {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  left: 14px;
+  z-index: 2;
+  padding: 8px 11px;
+  border: 1px solid rgba(134, 216, 211, 0.24);
+  border-radius: 8px;
+  color: #c9dedf;
+  background: rgba(7, 23, 36, 0.82);
+  font-size: 11px;
+  text-align: center;
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+}
 .dashboard-viewer-preview .building-preview {
   height: 100%;
   min-height: 100%;
@@ -9433,18 +9475,23 @@ a[href]:active {
 }
 
 .reference-dashboard .bim-toolbar > strong {
+  min-width: 0;
+  flex: 1;
   font-size: 16px;
 }
 
 .reference-dashboard .bim-toolbar > a {
+  flex: 0 0 auto;
   height: 38px;
   padding: 0 14px;
   border-radius: 8px;
   font-size: 12px;
+  white-space: nowrap;
 }
 
 .reference-dashboard .bim-toolbar > div {
   margin-left: auto;
+  flex: 0 0 auto;
   font-size: 11px;
 }
 
@@ -10687,13 +10734,67 @@ a[href]:active {
   inset: 0;
 }
 
-.cad-viewer-external-frame {
+.cad-viewer-window-launch {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  border: 0;
-  background: #fff;
+  padding: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 14px;
+  color: #e9f4f3;
+  text-align: center;
+}
+
+.cad-viewer-window-launch > span {
+  padding: 6px 12px;
+  border: 1px solid #3f6869;
+  border-radius: 999px;
+  color: #75d5ca;
+  background: #1e3336;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.cad-viewer-window-launch > strong {
+  max-width: 620px;
+  font-size: clamp(22px, 3vw, 34px);
+  line-height: 1.25;
+}
+
+.cad-viewer-window-launch > p {
+  max-width: 620px;
+  margin: 0;
+  color: #a9bdc1;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.cad-viewer-window-launch > button {
+  min-height: 46px;
+  padding: 0 22px;
+  border: 1px solid #4dd0c5;
+  border-radius: 9px;
+  color: #082c2b;
+  background: #65ddd2;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.cad-viewer-window-launch > button:hover {
+  background: #8ae8df;
+}
+
+.cad-viewer-window-launch > button:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+}
+
+.cad-viewer-window-launch > small {
+  color: #82999e;
+  font-size: 12px;
 }
 
 .cad-viewer-canvas.cadviewer-bootstrap {
@@ -11047,6 +11148,10 @@ a[href]:active {
 
   .cad-viewer-toolbar > div {
     width: 100%;
+  }
+
+  .cad-viewer-window-launch {
+    padding: 22px;
   }
 }
 
@@ -12168,5 +12273,353 @@ a[href]:active {
     display: grid;
     place-items: center;
     transform: rotate(90deg);
+  }
+}
+
+/* Fixed project asset status workspaces */
+.nav-section-label {
+  margin: 18px 12px 6px;
+  color: #6f8da4;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.asset-status-workspace {
+  display: grid;
+  gap: 18px;
+}
+
+.asset-status-title {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.asset-status-title span {
+  color: #137f93;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.asset-status-title h2 {
+  margin: 7px 0 5px;
+  color: #153a5d;
+  font-size: 30px;
+  letter-spacing: -0.04em;
+}
+
+.asset-status-title p {
+  margin: 0;
+  color: #6b7f91;
+  font-size: 14px;
+}
+
+.asset-ready-badge,
+.asset-pending-badge {
+  min-height: 38px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.asset-ready-badge {
+  color: #176d54;
+  background: #e4f7ef;
+}
+
+.asset-pending-badge {
+  color: #8b6116;
+  background: #fff2ce;
+}
+
+.asset-status-layout {
+  min-height: clamp(560px, calc(100dvh - 235px), 860px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 14px;
+}
+
+.asset-model-viewer,
+.asset-drawing-viewer,
+.asset-status-panel {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #d6e1e8;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(18, 52, 81, 0.07);
+}
+
+.asset-model-viewer {
+  position: relative;
+  background: #071724;
+}
+
+.asset-model-viewer canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.asset-model-help {
+  position: absolute;
+  right: 18px;
+  bottom: 16px;
+  left: 18px;
+  padding: 10px 13px;
+  border: 1px solid rgba(134, 216, 211, 0.25);
+  border-radius: 9px;
+  color: #c9dedf;
+  background: rgba(7, 23, 36, 0.82);
+  font-size: 12px;
+  text-align: center;
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+}
+
+.asset-viewer-state {
+  min-height: 100%;
+  padding: 30px;
+  display: grid;
+  place-content: center;
+  gap: 7px;
+  color: #d9e9eb;
+  text-align: center;
+}
+
+.asset-viewer-state.error {
+  color: #ffd0cc;
+  background: #3e2021;
+}
+
+.asset-drawing-viewer {
+  position: relative;
+  background: #dfeaf4;
+}
+
+.fixed-drawing-viewer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.drawing-viewer-toolbar {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  z-index: 3;
+  min-height: 42px;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid rgba(154, 177, 195, 0.85);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 8px 24px rgba(28, 58, 81, 0.16);
+  transform: translateX(-50%);
+  backdrop-filter: blur(8px);
+}
+
+.drawing-viewer-toolbar button {
+  min-width: 36px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  color: #174c78;
+  background: #edf4f9;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.drawing-viewer-toolbar button:hover {
+  background: #dceaf4;
+}
+
+.drawing-viewer-toolbar button:focus-visible,
+.drawing-pan-surface:focus-visible {
+  outline: 3px solid #178ba0;
+  outline-offset: 2px;
+}
+
+.drawing-viewer-toolbar output {
+  min-width: 56px;
+  color: #45657d;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.drawing-pan-surface {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.drawing-pan-surface.is-dragging {
+  cursor: grabbing;
+}
+
+.drawing-transform-layer {
+  width: 100%;
+  height: 100%;
+  padding: 78px 24px 54px;
+  display: grid;
+  place-items: center;
+  transform-origin: center;
+  will-change: transform;
+}
+
+.drawing-sheet-preview {
+  width: min(100%, 1050px);
+  height: auto;
+  border: 1px solid #b4c5d5;
+  background: #fff;
+  box-shadow: 0 18px 46px rgba(25, 58, 86, 0.16);
+}
+
+.drawing-viewer-help {
+  position: absolute;
+  right: 16px;
+  bottom: 13px;
+  left: 16px;
+  z-index: 2;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid rgba(174, 195, 210, 0.8);
+  border-radius: 8px;
+  color: #395b73;
+  background: rgba(247, 251, 254, 0.92);
+  font-size: 12px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.asset-status-panel {
+  padding: 25px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.asset-type-label {
+  width: max-content;
+  padding: 5px 9px;
+  border-radius: 7px;
+  color: #eafffd;
+  background: #137f86;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.asset-type-label.drawing {
+  background: #2e67a0;
+}
+
+.asset-status-panel h3 {
+  margin: 18px 0 9px;
+  color: #173b5a;
+  font-size: 23px;
+  line-height: 1.3;
+}
+
+.asset-status-panel > p {
+  margin: 0;
+  color: #667b8d;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.asset-status-panel dl {
+  margin: 24px 0;
+  display: grid;
+  gap: 0;
+  border-top: 1px solid #e2e9ee;
+}
+
+.asset-status-panel dl div {
+  min-height: 52px;
+  padding: 10px 0;
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid #e2e9ee;
+}
+
+.asset-status-panel dt {
+  color: #7a8d9c;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.asset-status-panel dd {
+  margin: 0;
+  color: #2e4a60;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.asset-primary-action,
+.asset-secondary-action {
+  min-height: 44px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.asset-primary-action {
+  border: 1px solid #127787;
+  color: #fff;
+  background: #127f91;
+}
+
+button.asset-primary-action:disabled {
+  cursor: not-allowed;
+  border-color: #c2cdd4;
+  color: #788997;
+  background: #e8edf0;
+}
+
+.asset-secondary-action {
+  margin-top: 8px;
+  border: 1px solid #cbd9e3;
+  color: #2b5e85;
+  background: #f6f9fb;
+}
+
+.asset-security-note {
+  margin-top: 14px;
+  color: #8a6d38;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+@media (max-width: 1050px) {
+  .asset-status-layout {
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .asset-model-viewer,
+  .asset-drawing-viewer {
+    min-height: 560px;
   }
 }

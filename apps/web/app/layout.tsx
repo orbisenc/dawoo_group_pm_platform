@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { AppShell } from "../components/dashboard/app-shell";
 import "./globals.css";
+import "./mobile.css";
 
 export const metadata: Metadata = {
   title: "다우그룹 PROJECT HUB",

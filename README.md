@@ -193,30 +193,21 @@ pnpm.cmd dev:web
 
 모든 일정 조회는 프로젝트 멤버십과 그룹 접근 권한을 서버에서 다시 검사합니다. 그룹 전용 일정은 해당 그룹 참여자와 프로젝트 관리자에게만 노출되며, 관련 이슈도 같은 프로젝트·그룹에 속해야 합니다. 알림은 담당자와 참여자별로 PostgreSQL에 저장되어 재접속 후에도 확인할 수 있습니다. API가 꺼진 화면 확인 환경에서는 프로젝트별 브라우저 저장소로 자동 전환됩니다.
 
-### 인터랙티브 3D 데모 뷰어
+### 3D Viewer for Google Drive 연결
 
-`/viewer`는 Three.js, React Three Fiber와 Drei를 클라이언트에서만 지연 로드합니다. 외부 모델 파일을 다운로드하지 않고 코드로 대지, 저층부, 상층부와 옥상 객체를 생성하며 회전·확대/축소·화면 이동, 전체 보기, 시점 초기화, 객체 선택·강조, 층별 표시, 데모 속성과 객체 관련 이슈를 제공합니다.
+`/viewer`는 왼쪽에 3D Viewer 전용 창 실행 영역, 오른쪽에 PROJECT HUB Google Drive 탐색 패널을 표시합니다. GLTF, GLB, STL, OBJ, FBX, STP/STEP, PLY, 3DM 파일을 클릭하거나 끌어 놓으면 Google Drive 파일 ID를 Open-with 상태로 이름이 고정된 `https://3dviewer.co/viewer` 최상위 창에 전달합니다. 해당 창은 화면을 이동했다가 돌아와도 재사용되며 최근 모델 5개와 마지막 연결은 현재 브라우저 세션에 최대 12시간 보존됩니다.
 
-화면에는 `3D 데모 모델 — 실제 BIM 연동 전`을 명시합니다. 실제 IFC 파싱·업로드는 지원하지 않으며 모델 공급 계층은 `ViewerAdapter` 인터페이스로 분리되어 있습니다. 샘플 건물은 PROJECT HUB에서 직접 생성한 기하 모델이므로 별도의 외부 모델 저작권이나 다운로드 의존성이 없습니다. Three.js 계열 라이브러리는 각 패키지의 MIT 라이선스를 따릅니다.
+Google 로그인과 모델 렌더링은 외부 서비스의 최상위 창에서 처리합니다. PROJECT HUB API는 Google OAuth 토큰, 3D 모델 원본이나 외부 뷰어 계정 토큰을 중계·저장하지 않습니다. 로컬 파일은 전용 창의 컴퓨터 파일 열기 기능으로 선택하며 IFC와 SKP는 현재 연결 지원 형식에서 제외합니다.
 
 ### CAD Viewer for Drive 연결
 
-`/cad`는 왼쪽에 `https://cadviewer.co/viewer`의 Google Drive Add-on 화면을 직접 표시하고 오른쪽에 PROJECT HUB의 Google Drive 탐색 패널을 표시합니다. Google Drive에서 DWG/DXF를 클릭하거나 왼쪽으로 끌어 놓으면 파일 ID를 Google Drive Open-with 상태로 CAD Viewer for Drive에 전달합니다. PROJECT HUB API는 CAD 원본이나 CAD Viewer 계정 토큰을 중계·저장하지 않습니다.
+`/cad`는 왼쪽에 CADViewer 전용 창 실행 영역을, 오른쪽에 PROJECT HUB의 Google Drive 탐색 패널을 표시합니다. Google Drive에서 DWG/DXF를 클릭하거나 왼쪽으로 끌어 놓으면 파일 ID를 Google Drive Open-with 상태로 이름이 고정된 `https://cadviewer.co/viewer` 최상위 창에 전달합니다. 이 창은 도면을 바꿀 때 재사용되며 PROJECT HUB API는 CAD 원본이나 CAD Viewer 계정 토큰을 중계·저장하지 않습니다.
 
-CAD Viewer for Drive의 Google 로그인, 파일 처리, 요금제와 권한은 외부 서비스 정책을 따릅니다. 브라우저 교차 출처 보안 때문에 로컬 파일을 PROJECT HUB가 외부 iframe에 자동 주입하지 않으며, 로컬 파일은 포함된 CAD Viewer 화면의 `From computer` 기능으로 직접 선택합니다. 외부 서비스가 iframe 정책이나 Open-with 계약을 변경하면 연결 동작을 다시 검증해야 합니다.
+CAD Viewer for Drive의 Google 로그인, 파일 처리, 요금제와 권한은 외부 서비스 정책을 따릅니다. Google 인증은 iframe이 아닌 CADViewer 최상위 창에서 진행하므로 임베디드 OAuth 403 오류를 피합니다. 브라우저 교차 출처 보안 때문에 로컬 파일은 해당 창의 `From computer` 기능으로 직접 선택합니다. 외부 서비스가 Open-with 계약을 변경하면 연결 동작을 다시 검증해야 합니다.
 
 도면 뷰어의 단계별 완료 기준과 외부 검증 게이트는 [`docs/CAD_VIEWER_ROADMAP.md`](docs/CAD_VIEWER_ROADMAP.md)를 따릅니다.
 
-3D/BIM 뷰어의 Autodesk APS 변환을 사용하려면 APS 개발자 허브에서 앱을 만든 뒤 루트 `.env`에 다음 값을 설정합니다.
-
-```text
-APS_CLIENT_ID=<서버 전용 APS Client ID>
-APS_CLIENT_SECRET=<서버 전용 APS Client Secret>
-APS_BUCKET_KEY=<전역에서 고유한 소문자 버킷 키, 선택>
-APS_REGION=US
-```
-
-Client Secret은 `NEXT_PUBLIC_` 환경변수로 만들거나 브라우저 코드에 넣지 않습니다. 2D CAD Viewer for Drive 연결에는 APS 자격증명이 필요하지 않습니다.
+현재 `/cad`와 `/viewer` 외부 뷰어 연결에는 Autodesk APS 자격증명이 필요하지 않습니다. 저장소에 남아 있는 기존 APS API 호환 경계는 현재 웹 뷰어 경로에서 호출하지 않습니다.
 
 ## 연결 확인
 

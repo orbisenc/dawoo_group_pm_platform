@@ -152,14 +152,13 @@ PROJECT HUB는 프로젝트별 참여자와 자료를 한 공간에 모으고, �
 
 ### F-07 3D/BIM 뷰어
 
-- 초기 샘플 모델과 함께 Google Drive의 IFC, OBJ, STP/STEP, SKP 모델을 브라우저에서 표시한다.
-- 회전, 이동, 확대·축소, 화면 맞춤, 기본 시점 복귀를 지원한다.
-- 데모 객체 선택·강조, 층별 표시, 객체별 샘플 속성과 관련 이슈 생성·보기를 지원한다.
-- 프로젝트 API가 권한과 작업 티켓을 검사하고 원본은 브라우저에서 Autodesk OSS 서명 URL로 직접 전송한다.
-- APS Model Derivative가 SVF2로 변환하며 IFC는 v4 변환 방식을 사용한다. APS 비밀키는 서버에만 보관한다.
-- 모델 로딩과 오류 상태를 한국어로 안내한다.
-- 데스크톱을 우선하되 모바일에서는 기본 탐색이 가능해야 한다.
-- 단일 파일 모델을 우선 지원하며 OBJ 외부 MTL·텍스처 묶음, 전체 BIM 속성 트리, 단면, 측정, 마크업은 제외한다.
+- CAD 화면과 같은 고정 좌우 레이아웃으로 왼쪽은 3D Viewer 전용 창 실행 영역, 오른쪽은 Google Drive 모델 목록을 표시한다.
+- Google Drive의 GLTF, GLB, STL, OBJ, FBX, STP/STEP, PLY, 3DM 모델을 선택하거나 끌어 놓아 이름이 고정된 `3dviewer.co` 최상위 창에서 연다.
+- PROJECT HUB는 Google Drive 파일 ID만 Open-with 상태로 전달하며 API 서버는 Google OAuth 토큰, 모델 원본과 외부 뷰어 계정 토큰을 중계하거나 저장하지 않는다.
+- 최근 모델 5개와 마지막 Open-with URL을 프로젝트별 현재 브라우저 세션에 최대 12시간 보존한다.
+- 모델 로딩, 렌더링, 탐색과 외부 서비스 오류는 3D Viewer for Google Drive의 계정, 권한, 요금제와 서비스 정책을 따른다.
+- 로컬 파일은 브라우저 교차 출처 제한으로 자동 전달하지 않고 전용 창의 컴퓨터 파일 열기 기능을 사용한다.
+- IFC, SKP, OBJ 외부 MTL·텍스처 묶음, BIM 속성 트리, 단면, 측정, 마크업은 현재 범위에서 제외한다.
 
 ### F-08 기본 전자결재
 
@@ -253,19 +252,19 @@ PROJECT HUB는 프로젝트별 참여자와 자료를 한 공간에 모으고, �
 
 ## 10. MVP 이후 전문 기능 — CAD Viewer for Drive 연결
 
-- CAD 도면 화면은 왼쪽 대부분에 CAD Viewer for Drive 웹앱을 직접 표시하고, 오른쪽을 연결된 Google Drive DWG/DXF 목록으로 구성한다.
-- 도면을 클릭하거나 실행 영역에 끌어 놓으면 Google Drive 파일 ID를 Open-with 상태로 외부 뷰어에 전달한다.
+- CAD 도면 화면은 왼쪽 대부분에 CADViewer 전용 창 실행 영역을 표시하고, 오른쪽을 연결된 Google Drive DWG/DXF 목록으로 구성한다.
+- 도면을 클릭하거나 실행 영역에 끌어 놓으면 Google Drive 파일 ID를 Open-with 상태로 이름이 고정된 CADViewer 최상위 창에 전달한다.
 - 지원 형식은 DWG/DXF이며 폴더와 그 밖의 형식은 외부 뷰어 열기 대상으로 처리하지 않는다.
 - PROJECT HUB API는 Google OAuth 토큰, CAD 파일 본문과 CAD Viewer 계정 토큰을 중계하거나 저장하지 않는다.
-- 마지막 Open-with URL은 프로젝트별 현재 브라우저 세션에 12시간 보존하여 다른 메뉴에서 돌아와도 다시 연다.
+- 마지막 Open-with URL은 프로젝트별 현재 브라우저 세션에 12시간 보존하여 다른 메뉴에서 돌아와도 같은 CADViewer 창에서 다시 열 수 있다.
 - 실제 렌더링과 로컬 파일 열기는 CAD Viewer for Drive의 계정, 권한, 요금제와 외부 서비스 정책을 따른다.
 
-### APS 3D/BIM 모델 뷰어
+### 3D Viewer for Google Drive 연결
 
-- CAD 화면과 같은 고정 좌우 레이아웃으로 왼쪽은 3D 뷰어, 오른쪽은 Google Drive 모델 목록을 표시한다.
-- IFC, OBJ, STP/STEP, SKP 단일 파일과 최대 125MB를 지원한다.
-- PROJECT HUB API는 프로젝트 권한, 확장자·MIME·크기, 서명 티켓을 검사하고 APS 서버 변환을 조정한다.
-- 읽기는 프로젝트 멤버에게, 새 변환 요청은 프로젝트 쓰기 권한 사용자에게만 허용한다.
+- 왼쪽 3D Viewer 전용 창 실행 영역과 오른쪽 Google Drive 목록을 고정 레이아웃으로 표시한다.
+- 지원 형식은 GLTF, GLB, STL, OBJ, FBX, STP/STEP, PLY, 3DM이며 파일 ID를 외부 뷰어의 Open-with 상태로 전달한다.
+- PROJECT HUB API는 모델 원본이나 외부 서비스 토큰을 중계·저장하지 않는다.
+- 실제 형식별 렌더링 가능 여부와 파일 크기 제한은 3D Viewer for Google Drive 정책을 따른다.
 
 ## 10. 핵심 도메인 개체
 

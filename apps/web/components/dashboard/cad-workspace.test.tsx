@@ -1,8 +1,10 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   BimWorkspace,
+  buildBimHistoryKey,
+  buildBimViewerCoUrl,
   buildCadDriveListUrl,
   buildCadHistoryKey,
   buildCadViewerCoUrl,
@@ -14,29 +16,6 @@ import {
   writeCadDrawingHistory,
 } from "./cad-workspace";
 import { ProjectProvider } from "./project-context";
-
-vi.mock("cadviewer", () => ({
-  cvjs_debugMode: vi.fn(),
-  cvjs_CADViewerPro: vi.fn(),
-  cvjs_setCADViewerInterfaceVersion: vi.fn(),
-  cvjs_setCADViewerSkin: vi.fn(),
-  cvjs_setLicenseKeyDirect: vi.fn(),
-  cvjs_setAllServerPaths_and_Handlers: vi.fn(),
-  cvjs_setCallbackMethod: vi.fn(),
-  cvjs_loadCADViewerLanguage: vi.fn(),
-  cvjs_InitCADViewer_highLight_popUp_app: vi.fn(),
-  cvjs_allowFileLoadToServer: vi.fn(),
-  cvjs_conversion_clearAXconversionParameters: vi.fn(),
-  cvjs_conversion_addAXconversionParameter: vi.fn(),
-  cvjs_resizeWindow_position: vi.fn(),
-  cvjs_ClearDrawing: vi.fn(),
-  cvjs_LoadDrawing: vi.fn(),
-  cvjs_ZoomExtents: vi.fn(),
-  cvjs_ZoomIn: vi.fn(),
-  cvjs_ZoomOut: vi.fn(),
-  cvjs_LayerList: vi.fn(),
-  cvjs_toggleBlackWhite: vi.fn(),
-}));
 
 describe("CAD·BIM 작업공간", () => {
   beforeEach(() => {
@@ -71,10 +50,12 @@ describe("CAD·BIM 작업공간", () => {
     expect(isCadFile({ name: "도면", mimeType: "application/vnd.google-apps.folder" })).toBe(false);
   });
 
-  it("IFC, OBJ, STEP/STP, SKP만 3D 모델로 분류한다", () => {
-    for (const name of ["건물.ifc", "매스.OBJ", "부품.stp", "설비.step", "스케치.skp"]) {
+  it("3D Viewer가 안내하는 3D 모델 형식만 분류한다", () => {
+    for (const name of ["건물.gltf", "건물.glb", "출력.stl", "매스.OBJ", "모델.fbx", "부품.stp", "설비.step", "점군.ply", "라이노.3dm"]) {
       expect(isBimFile({ name, mimeType: "application/octet-stream" })).toBe(true);
     }
+    expect(isBimFile({ name: "모델.ifc", mimeType: "application/octet-stream" })).toBe(false);
+    expect(isBimFile({ name: "스케치.skp", mimeType: "application/octet-stream" })).toBe(false);
     expect(isBimFile({ name: "도면.dwg", mimeType: "application/octet-stream" })).toBe(false);
   });
 
@@ -94,10 +75,18 @@ describe("CAD·BIM 작업공간", () => {
     expect(JSON.parse(url.searchParams.get("state") ?? "{}")).toEqual({ action: "open", ids: ["drive-file-1"] });
   });
 
+  it("3D Viewer에 Google Drive Open-with 상태를 전달한다", () => {
+    const url = new URL(buildBimViewerCoUrl("drive-model-1"));
+    expect(url.origin).toBe("https://3dviewer.co");
+    expect(url.pathname).toBe("/viewer");
+    expect(JSON.parse(url.searchParams.get("state") ?? "{}")).toEqual({ action: "open", ids: ["drive-model-1"] });
+  });
+
   it("프로젝트와 뷰어 종류별로 서로 다른 복원 저장소를 사용한다", () => {
     expect(buildViewerSessionKey("project-1", "cad")).toBe("project-hub:project-1:cad:viewer-model");
     expect(buildViewerSessionKey("project-1", "bim")).toBe("project-hub:project-1:bim:viewer-model");
     expect(buildViewerSessionKey("project-2", "cad")).not.toBe(buildViewerSessionKey("project-1", "cad"));
+    expect(buildBimHistoryKey("project-1")).toBe("project-hub:project-1:bim:recent-models");
   });
 
   it("최근 도면은 프로젝트별로 최대 5개를 12시간 동안 보존한다", () => {
@@ -115,21 +104,45 @@ describe("CAD·BIM 작업공간", () => {
     expect(readCadDrawingHistory(`${key}:expired`, now)).toEqual([]);
   });
 
-  it("CAD 탭 내부에 CAD Viewer for Drive와 Google Drive 패널을 표시한다", async () => {
+  it("CAD 탭에 CADViewer 전용 창 실행 영역과 Google Drive 패널을 표시한다", async () => {
     render(
       <ProjectProvider>
         <CadWorkspace />
       </ProjectProvider>,
     );
 
-    expect(screen.getByRole("heading", { name: "CAD 도면" })).toBeInTheDocument();
-    expect(screen.getByTitle("CAD Viewer for Google Drive")).toHaveAttribute("src", "https://cadviewer.co/viewer");
+    expect(screen.getByRole("heading", { name: "CAD 도면 뷰어" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "CADViewer 전용 창 실행" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "CADViewer 전용 창 열기" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "연결된 도면" })).toBeInTheDocument();
-    expect(await screen.findByText("CAD Viewer for Drive 연결")).toBeInTheDocument();
+    expect(await screen.findByText("CADViewer 전용 창 사용")).toBeInTheDocument();
+    expect(screen.getByText(/브라우저 최상위 창에서 진행됩니다/)).toBeInTheDocument();
+    expect(screen.queryByTitle("CAD Viewer for Google Drive")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "화면 맞춤" })).not.toBeInTheDocument();
   });
 
-  it("CAD와 같은 레이아웃에 3D 뷰어와 모델 패널을 표시한다", async () => {
+  it("CADViewer를 이름이 고정된 전용 창으로 열고 다시 사용할 수 있게 안내한다", async () => {
+    const focus = vi.fn();
+    const open = vi.spyOn(window, "open").mockReturnValue({ focus } as unknown as Window);
+    render(
+      <ProjectProvider>
+        <CadWorkspace />
+      </ProjectProvider>,
+    );
+
+    await screen.findByText("CADViewer 전용 창 사용");
+    fireEvent.click(screen.getByRole("button", { name: "CADViewer 전용 창 열기" }));
+    expect(open).toHaveBeenCalledWith(
+      "https://cadviewer.co/viewer",
+      "project-hub-cadviewer",
+      expect.stringContaining("popup=yes"),
+    );
+    expect(focus).toHaveBeenCalledOnce();
+    expect(await screen.findByText(/다음 파일부터는 같은 창을 재사용/)).toBeInTheDocument();
+    open.mockRestore();
+  });
+
+  it("CAD와 같은 레이아웃에 3D Viewer 전용 창과 모델 패널을 표시한다", async () => {
     render(
       <ProjectProvider>
         <BimWorkspace />
@@ -137,9 +150,31 @@ describe("CAD·BIM 작업공간", () => {
     );
 
     expect(screen.getByRole("heading", { name: "3D/BIM 뷰어" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Autodesk APS 3D/BIM 뷰어")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "3D Viewer 전용 창 실행" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "3D Viewer 전용 창 열기" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "연결된 3D 모델" })).toBeInTheDocument();
-    expect(screen.getByText("오른쪽 Google Drive에서 3D 모델을 끌어 놓으세요.")).toBeInTheDocument();
+    expect(screen.getByText("3D Viewer 전용 창 사용")).toBeInTheDocument();
+    expect(screen.getAllByText(/GLTF.*GLB.*STL.*OBJ.*FBX.*STEP.*PLY.*3DM/)).toHaveLength(2);
+    expect(screen.queryByLabelText("Autodesk APS 3D/BIM 뷰어")).not.toBeInTheDocument();
+  });
+
+  it("3D Viewer를 이름이 고정된 전용 창으로 연다", async () => {
+    const focus = vi.fn();
+    const open = vi.spyOn(window, "open").mockReturnValue({ focus } as unknown as Window);
+    render(
+      <ProjectProvider>
+        <BimWorkspace />
+      </ProjectProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "3D Viewer 전용 창 열기" }));
+    expect(open).toHaveBeenCalledWith(
+      "https://3dviewer.co/viewer",
+      "project-hub-3dviewer",
+      expect.stringContaining("popup=yes"),
+    );
+    expect(focus).toHaveBeenCalledOnce();
+    open.mockRestore();
   });
 
   it("다른 메뉴에서 돌아오면 마지막 CAD Viewer for Drive 도면을 복원한다", async () => {
@@ -154,13 +189,13 @@ describe("CAD·BIM 작업공간", () => {
       </ProjectProvider>,
     );
 
-    expect(await screen.findByText("저장된도면.dwg")).toBeInTheDocument();
+    expect(await screen.findAllByText("저장된도면.dwg")).toHaveLength(2);
   });
 
-  it("다른 메뉴에서 돌아오면 이전 BIM 모델 변환 상태를 복원한다", async () => {
+  it("다른 메뉴에서 돌아오면 마지막 3D Viewer 모델을 복원한다", async () => {
     window.sessionStorage.setItem(
       buildViewerSessionKey("30000000-0000-4000-8000-000000000001", "bim"),
-      JSON.stringify({ urn: "saved-urn", ticket: "saved-ticket", fileName: "저장된모델.ifc", savedAt: Date.now() }),
+      JSON.stringify({ fileName: "저장된모델.glb", url: buildBimViewerCoUrl("saved-model"), savedAt: Date.now() }),
     );
 
     render(
@@ -169,7 +204,6 @@ describe("CAD·BIM 작업공간", () => {
       </ProjectProvider>,
     );
 
-    expect(await screen.findByText("저장된모델.ifc")).toBeInTheDocument();
-    await waitFor(() => expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/bim/status?ticket=saved-ticket"), expect.any(Object)));
+    expect(await screen.findAllByText("저장된모델.glb")).toHaveLength(2);
   });
 });

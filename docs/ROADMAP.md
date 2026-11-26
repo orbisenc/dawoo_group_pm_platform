@@ -195,10 +195,10 @@ PROJECT HUB는 기능을 단계별로 완성하며 각 단계의 테스트 게�
 
 ### 후속 확장 구현
 
-- Google Drive의 IFC, OBJ, STP/STEP, SKP 단일 파일을 APS SVF2로 서버 변환 조정한다.
-- 프로젝트 쓰기 권한, 확장자·MIME·125MB 제한, 프로젝트 종속 서명 티켓을 적용한다.
-- CAD 화면과 동일한 고정 좌우 레이아웃에서 3D 탐색과 Google Drive 끌어 놓기를 제공한다.
-- OBJ 외부 MTL·텍스처 묶음과 고급 BIM 도구는 후속 범위로 유지한다.
+- Google Drive의 GLTF, GLB, STL, OBJ, FBX, STP/STEP, PLY, 3DM 파일 ID를 3D Viewer for Google Drive의 Open-with 상태로 연결한다.
+- CAD 화면과 동일한 고정 좌우 레이아웃에서 이름이 고정된 3D Viewer 전용 창과 Google Drive 클릭·끌어 놓기를 제공한다.
+- PROJECT HUB API는 모델 원본과 Google·외부 뷰어 토큰을 중계하거나 저장하지 않는다.
+- IFC, SKP, OBJ 외부 MTL·텍스처 묶음과 고급 BIM 도구는 후속 범위로 유지한다.
 
 ## 10. 단계 7 — 기본 전자결재
 
@@ -261,12 +261,16 @@ PROJECT HUB는 기능을 단계별로 완성하며 각 단계의 테스트 게�
 
 - IFC 업로드, 서버 변환 파이프라인, 요소 속성 트리
 - 모델 단면·측정·마크업과 이슈 연결
-- DWG/DXF 2D 보기는 CAD Viewer for Drive를 PROJECT HUB 안에 포함하는 방식으로 제공한다.
+- DWG/DXF 2D 보기는 Google OAuth의 임베디드 인증 제한을 피하기 위해 재사용 가능한 CADViewer 최상위 전용 창으로 제공한다.
 - Google Drive 파일 ID는 표준 Open-with 상태로 외부 뷰어에 전달하며 PROJECT HUB API는 원본과 외부 서비스 토큰을 중계하지 않는다.
-- 운영 배포 전 CAD Viewer for Drive의 iframe·Open-with 계약, Google 권한 범위, 외부 서비스 장애와 데이터 처리 정책을 검토한다.
+- 운영 배포 전 CAD Viewer for Drive의 Open-with 계약, Google 권한 범위, 외부 서비스 장애와 데이터 처리 정책을 검토한다.
 - 대용량 모델 스트리밍, 권한, 변환 실패 복구
 
-현재 구현 상태: `/cad`의 좌측에 CAD Viewer for Drive 웹앱을 직접 표시하고 우측 Google Drive의 DWG/DXF 탐색·클릭·드래그 앤 드롭으로 파일 ID를 연결한다. 최근 도면 5개와 12시간 세션 복원도 유지한다. 실제 도면 렌더링은 CAD Viewer for Drive 계정·권한과 외부 서비스 상태에 의존하며 승인된 Google 계정 UAT가 완료 전 외부 검증 항목이다.
+현재 구현 상태: `/cad`의 좌측에 CADViewer 전용 창 실행 영역을 표시하고 우측 Google Drive의 DWG/DXF 탐색·클릭·드래그 앤 드롭으로 파일 ID를 이름이 고정된 최상위 창에 연결한다. 최근 도면 5개와 12시간 세션 복원도 유지한다. CAD 경로에는 Autodesk APS를 사용하지 않는다. 실제 도면 렌더링은 CAD Viewer for Drive 계정·권한과 외부 서비스 상태에 의존하며 승인된 Google 계정 UAT가 완료 전 외부 검증 항목이다.
+
+`/viewer`도 같은 구조로 3D Viewer 전용 창 실행 영역과 Google Drive 모델 목록을 제공한다. 지원 모델을 클릭하거나 끌어 놓으면 파일 ID를 이름이 고정된 `3dviewer.co` 최상위 창에 Open-with 상태로 전달하고, 최근 모델 5개와 12시간 세션을 복원한다. 현재 웹 경로는 Autodesk APS를 사용하지 않으며 실제 Google 계정과 각 형식의 외부 렌더링은 UAT가 남아 있다.
+
+고정 자산 현황은 `/model-status`와 `/drawing-status`로 분리했다. 3D 모델 현황은 저장소에서 직접 생성한 아파트 1개 동 GLB를 표시하며 출처와 사용 조건은 [샘플 자산 문서](./SAMPLE_ASSETS.md)에 기록한다. 통합 대시보드의 BIM 통합 모델 미리보기에서도 같은 GLB와 회전·확대·이동 조작을 제공하고 `/model-status`로 연결한다. 2D 도면 현황은 사용자가 공개를 승인한 S-202 DWG의 첫 번째 종이공간을 고해상도 변환본으로 고정 표시하며 확대·축소·이동·전체 보기 조작을 제공한다. 원본 DWG는 사내 공유 드라이브에 유지하고 정적 공개 자산에는 포함하지 않는다.
 
 ### 12.2 고급 결재
 

@@ -26,6 +26,10 @@ describe("참조 이미지형 통합 대시보드", () => {
       await screen.findByRole("heading", { name: "이슈 피드" }),
     ).toBeInTheDocument();
     expect(screen.getByText(/BIM 통합 모델 미리보기/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "3D 모델 현황 열기" })).toHaveAttribute("href", "/model-status");
+    expect(screen.getByText("GLB")).toBeInTheDocument();
+    expect(screen.getByText("고정 모델")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /아파트 101동 인터랙티브 3D 미리보기/ })).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "공유 드라이브" }),
     ).toBeInTheDocument();
