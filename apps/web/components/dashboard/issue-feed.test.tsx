@@ -58,6 +58,30 @@ describe("IssueFeed", () => {
     expect(screen.getByAltText("site.png")).toBeInTheDocument();
   });
 
+  it("3MB를 초과하고 50MB 이하인 이미지를 추가할 수 있다", async () => {
+    renderIssueFeed();
+    fireEvent.click(await screen.findByRole("button", { name: "+ 새 이슈 등록" }));
+    const file = new File(["image"], "large-site.png", { type: "image/png" });
+    Object.defineProperty(file, "size", { value: 4 * 1024 * 1024 });
+
+    fireEvent.change(screen.getByLabelText("본문 이미지 또는 영상"), { target: { files: [file] } });
+
+    expect(await screen.findByAltText("large-site.png")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("50MB를 초과한 이미지는 거부한다", async () => {
+    renderIssueFeed();
+    fireEvent.click(await screen.findByRole("button", { name: "+ 새 이슈 등록" }));
+    const file = new File(["image"], "too-large.png", { type: "image/png" });
+    Object.defineProperty(file, "size", { value: 50 * 1024 * 1024 + 1 });
+
+    fireEvent.change(screen.getByLabelText("본문 이미지 또는 영상"), { target: { files: [file] } });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("이미지는 파일당 50MB 이하만 가능합니다.");
+    expect(screen.queryByAltText("too-large.png")).not.toBeInTheDocument();
+  });
+
   it("본문 드롭 영역에 놓은 영상을 미리보기에 추가한다", async () => {
     renderIssueFeed();
     fireEvent.click(await screen.findByRole("button", { name: "+ 새 이슈 등록" }));

@@ -27,6 +27,8 @@ type FilePickerWindow = Window & {
 
 const storageKey = "project-hub-issue-feed-v2";
 const retentionDays = 30;
+const maximumImageBytes = 50 * 1024 * 1024;
+const maximumVideoBytes = 10 * 1024 * 1024;
 const emptyStore: FeedStore = { version: 1, projects: {} };
 const categories = ["사업성", "금융", "인허가", "설계", "시공", "운영"];
 
@@ -108,8 +110,8 @@ function fileToMedia(file: File) {
     const isImage = file.type.startsWith("image/");
     const isVideo = file.type.startsWith("video/");
     if (!isImage && !isVideo) return reject(new Error("본문에는 이미지 또는 영상 파일만 추가할 수 있습니다."));
-    const limit = isImage ? 3 * 1024 * 1024 : 10 * 1024 * 1024;
-    if (file.size > limit) return reject(new Error(isImage ? "이미지는 파일당 3MB 이하만 가능합니다." : "영상은 파일당 10MB 이하만 가능합니다."));
+    const limit = isImage ? maximumImageBytes : maximumVideoBytes;
+    if (file.size > limit) return reject(new Error(isImage ? "이미지는 파일당 50MB 이하만 가능합니다." : "영상은 파일당 10MB 이하만 가능합니다."));
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("미디어 파일을 읽지 못했습니다."));
     reader.onload = () => resolve({
@@ -376,7 +378,7 @@ export function IssueFeed({ title = "이슈 피드", fullPage = false, adminMode
             <div className="composer-options">
               <select aria-label="이슈 분류" value={newCategory} onChange={(event) => setNewCategory(event.target.value)}>{categories.map((category) => <option key={category}>{category}</option>)}</select>
               <label className="attach-button">본문 이미지·영상<input aria-label="본문 이미지 또는 영상" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" multiple onChange={(event) => void selectMedia(event)} /></label>
-              <span>{draftMediaCount ? `${draftMediaCount}개 추가됨` : "이미지 3MB · 영상 10MB 이하"}</span><button type="submit">이슈 등록</button>
+              <span>{draftMediaCount ? `${draftMediaCount}개 추가됨` : "이미지 50MB · 영상 10MB 이하"}</span><button type="submit">이슈 등록</button>
             </div>
           </form>
         ) : null}
